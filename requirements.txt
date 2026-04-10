@@ -1,0 +1,27 @@
+# ==========================================
+# DoNotPlay - 依赖清单 (Requirements)
+# ==========================================
+
+# 1. 核心视觉与图像处理
+opencv-python>=4.8.0
+numpy>=1.23.0
+Pillow>=10.0.0
+
+# 2. AI 与机器学习模型
+mediapipe>=0.10.9
+ultralytics>=8.1.0
+
+# 3. 后端服务与数据通信
+Flask>=3.0.0
+Flask-Cors>=4.0.0
+websockets>=12.0
+
+# 4. 桌面 GUI 框架
+pywebview>=4.4.1
+
+# 5. Windows 底层依赖 (用于 pywebview 渲染和 PyInstaller 打包)
+pythonnet>=3.0.3
+clr-loader>=0.2.6
+
+# 6. 打包构建工具 (仅开发环境打包时需要)
+pyinstaller>=6.3.0

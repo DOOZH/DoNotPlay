@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DoNotPlay</title>
+  <link rel="stylesheet" href="app.css">
+</head>
+
+<body>
+
+  <div class="hdr">
+    <div class="hdr-brand">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <circle cx="8" cy="8" r="7" stroke="#EF9F27" stroke-width="1" />
+        <circle cx="8" cy="8" r="3" fill="#EF9F27" opacity="0.5" />
+      </svg>
+      <span id="versionLabel">DoNotPlay v0.3</span>
+    </div>
+    <div class="hdr-right">
+      <button class="hdr-btn" id="newPhaseBtn" title="重置本阶段所有计时">开启新阶段</button>
+      <button class="hdr-btn" id="sensBtn" title="专注灵敏度 [S]">灵敏度: 正常</button>
+      <button class="hdr-btn" id="calibBtn" title="校准中心位置 [C]">校准</button>
+      <button class="hdr-btn" id="soundBtn" title="切换音频提示 [M]">声音: 关闭</button>
+      <button class="hdr-btn" id="themeBtn" title="切换深色/浅色模式 [T]">主题</button>
+      <div class="clock" id="clk">--:--:--</div>
+      <div class="pill" id="sPill" style="background:var(--bg3);color:var(--muted);border-color:var(--border)">
+        <div class="dot" id="sDot" style="background:var(--muted)"></div>
+        <span id="sTxt">初始化</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="body">
+    <div class="cam-panel">
+      <div class="cam-view">
+        <video id="vid" playsinline autoplay muted style="display:none"></video>
+        <canvas id="cnv" style="display:none"></canvas>
+        <img id="vid_stream" src="http://localhost:5001/video_feed" alt="摄像头画面"
+          style="width:100%;height:100%;object-fit:contain;border-radius:inherit;">
+        <div class="cam-corners">
+          <div class="brk tl"></div>
+          <div class="brk tr"></div>
+          <div class="brk bl"></div>
+          <div class="brk br"></div>
+        </div>
+        <!-- Calibration overlay -->
+        <div class="calib-overlay" id="calibOverlay">
+          <div class="calib-ring">
+            <div class="calib-ring-inner"></div>
+          </div>
+          <div class="calib-text">自然地看着屏幕<br>并保持不动</div>
+          <div class="calib-countdown" id="calibCountdown">3</div>
+        </div>
+        <!-- Posture indicator -->
+        <div class="posture-indicator" id="postureTag">良好姿势</div>
+        <div class="state-badge" id="sBadge" style="color:var(--muted)">加载中</div>
+        <div class="no-cam" id="noCam">
+          <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+            <circle cx="20" cy="20" r="19" stroke="#666" stroke-width="1.5" />
+            <circle cx="20" cy="16" r="6" stroke="#666" stroke-width="1.5" />
+            <path d="M7 36c0-7.18 5.82-13 13-13s13 5.82 13 13" stroke="#666" stroke-width="1.5" />
+          </svg>
+          <h3>需要摄像头</h3>
+          <p>允许摄像头访问以开始跟踪。所有处理都在本地运行。</p>
+          <button class="cam-btn" id="camBtn">启用摄像头</button>
+          <p id="errMsg" style="color:var(--red-d);font-size:10px;margin-top:4px"></p>
+        </div>
+      </div>
+      <div class="md3-stats">
+        <div class="md3-stat-card">
+          <div class="md3-stat-icon">👁️</div>
+          <div class="md3-stat-info">
+            <div class="md3-stat-lbl">瞬目率</div>
+            <div class="md3-stat-val" id="cBlinkRate">- 次/分</div>
+          </div>
+        </div>
+        <div class="md3-stat-card">
+          <div class="md3-stat-icon">🦴</div>
+          <div class="md3-stat-info">
+            <div class="md3-stat-lbl">颈椎负荷</div>
+            <div class="md3-stat-val" id="cNeckStrain">校准中...</div>
+          </div>
+        </div>
+        <div class="md3-stat-card">
+          <div class="md3-stat-icon">💤</div>
+          <div class="md3-stat-info">
+            <div class="md3-stat-lbl">闭眼(PERCLOS)</div>
+            <div class="md3-stat-val" id="cPerclos">0%</div>
+          </div>
+        </div>
+        <div class="md3-stat-card">
+          <div class="md3-stat-icon">🎯</div>
+          <div class="md3-stat-info">
+            <div class="md3-stat-lbl">视线状态</div>
+            <div class="md3-stat-val" id="cGazeState">-</div>
+          </div>
+        </div>
+        <div class="md3-stat-card">
+          <div class="md3-stat-icon">⚖️</div>
+          <div class="md3-stat-info">
+            <div class="md3-stat-lbl">肩颈平衡</div>
+            <div class="md3-stat-val" id="cShoulderSymmetry">-</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="dash">
+      <!-- Banners -->
+      <div class="banner break-banner" id="brkBanner">
+        <div class="banner-txt" id="brkBannerTxt">该休息了！</div>
+        <button class="banner-btn" id="brkDismissBtn">忽略</button>
+      </div>
+
+      <div class="banner phone-banner" id="phoneBanner">
+        <div class="banner-txt">⚠️ 警告：正在使用手机！请立刻放下，返回专注状态。</div>
+        <button class="banner-btn" id="phoneDismissBtn">我已放下</button>
+      </div>
+
+      <!-- NEW METRIC GRID -->
+      <div class="metric-grid">
+        <div class="md-card">
+          <div class="md-card-icon">⏱️</div>
+          <div class="md-card-lbl">阶段已进行时间</div>
+          <div class="md-card-val" id="phaseElapsed">00:00:00</div>
+        </div>
+        <div class="md-card">
+          <div class="md-card-icon">🎯</div>
+          <div class="md-card-lbl">阶段累计专注</div>
+          <div class="md-card-val" id="phaseFocus" style="color:var(--green)">00:00:00</div>
+        </div>
+        <div class="md-card">
+          <div class="md-card-icon">🔥</div>
+          <div class="md-card-lbl">当前连续专注</div>
+          <div class="md-card-val" id="curPhaseStreak" style="color:var(--blue)">00:00:00</div>
+        </div>
+        <div class="md-card">
+          <div class="md-card-icon">📱</div>
+          <div class="md-card-lbl">累计玩手机</div>
+          <div class="md-card-val" id="phasePhone" style="color:var(--purple)">00:00:00</div>
+        </div>
+        <div class="md-card">
+          <div class="md-card-icon">💭</div>
+          <div class="md-card-lbl">累计走神</div>
+          <div class="md-card-val" id="phaseDist" style="color:var(--amber)">00:00:00</div>
+        </div>
+        <div class="md-card">
+          <div class="md-card-icon">🚶</div>
+          <div class="md-card-lbl">累计离开</div>
+          <div class="md-card-val" id="phaseAway" style="color:var(--red-d)">00:00:00</div>
+        </div>
+      </div>
+
+      <!-- Pomodoro Timer -->
+      <div class="pomo-sec idle" id="pomoSec">
+        <div class="pomo-layout">
+          <div class="pomo-ring-wrap">
+            <div class="pomo-ring">
+              <svg width="160" height="160" viewBox="0 0 160 160">
+                <circle cx="80" cy="80" r="74" fill="none" class="pomo-bg-ring" stroke-width="4" />
+                <circle cx="80" cy="80" r="74" fill="none" class="pomo-fg-ring" stroke-width="6" stroke-linecap="round"
+                  stroke-dasharray="465" stroke-dashoffset="0" id="pomoArc" />
+              </svg>
+              <div class="pomo-ring-center">
+                <div class="pomo-time" id="pomoTime">25:00</div>
+                <div class="pomo-phase" id="pomoPhase">准备就绪</div>
+              </div>
+            </div>
+          </div>
+          <div class="pomo-info">
+            <div class="pomo-controls">
+              <button class="md-btn primary active" id="pomoStartBtn">开始专注</button>
+              <button class="md-btn outline" id="pomoSkipBtn" style="display:none">跳过</button>
+              <button class="md-btn text-btn" id="pomoResetBtn" style="display:none">重置</button>
+            </div>
+            <div class="pomo-stats">
+              <div class="pomo-stat">
+                <div class="pomo-stat-lbl">已完成 (今)</div>
+                <div class="pomo-stat-val" id="pomoCompleted" style="color:var(--green)">0</div>
+              </div>
+              <div class="pomo-stat">
+                <div class="pomo-stat-lbl">周期 (目标)</div>
+                <div class="pomo-stat-val" id="pomoCycle" style="color:var(--muted)">1 / 4</div>
+              </div>
+            </div>
+            <div class="pomo-settings">
+              <div class="pomo-set-group">
+                <label>工作</label>
+                <input type="number" id="pomoWorkInput" value="25" min="1" max="90">
+              </div>
+              <div class="pomo-set-group">
+                <label>短息</label>
+                <input type="number" id="pomoShortInput" value="5" min="1" max="30">
+              </div>
+              <div class="pomo-set-group">
+                <label>长息</label>
+                <input type="number" id="pomoLongInput" value="15" min="5" max="60">
+              </div>
+              <div class="pomo-set-group">
+                <label>轮数</label>
+                <input type="number" id="pomoRoundsInput" value="4" min="2" max="8">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <!-- Focus Score -->
+        <div class="sec">
+          <div class="sec-title">专注分数</div>
+          <div class="fb-row">
+            <div class="fb-hdr">
+              <span class="fb-lbl">会话平均</span>
+              <span class="fb-pct" id="fScore" style="color:var(--green)">-</span>
+            </div>
+            <div class="fbar">
+              <div class="fbar-fill" id="fFill" style="width:0%;background:var(--green)"></div>
+            </div>
+          </div>
+          <div class="fb-row" style="margin-bottom:0">
+            <div class="fb-hdr">
+              <span class="fb-lbl">最近 5 分钟</span>
+              <span class="fb-pct" id="rScore" style="color:var(--amber)">-</span>
+            </div>
+            <div class="fbar">
+              <div class="fbar-fill" id="rFill" style="width:0%;background:var(--amber)"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Daily Goal -->
+        <div class="sec">
+          <div class="sec-title">每日目标</div>
+          <div class="goal-ring-wrap">
+            <div class="goal-ring">
+              <svg width="60" height="60" viewBox="0 0 60 60">
+                <circle cx="30" cy="30" r="26" fill="none" stroke="var(--border)" stroke-width="4" />
+                <circle cx="30" cy="30" r="26" fill="none" stroke="var(--green)" stroke-width="4" stroke-linecap="round"
+                  stroke-dasharray="163.36" stroke-dashoffset="163.36" id="goalArc" />
+              </svg>
+              <div class="goal-ring-pct" id="goalPct" style="color:var(--green)">0%</div>
+            </div>
+            <div class="goal-info">
+              <span id="goalProgress">0m / 120m 专注</span>
+              <span id="goalToday" style="color:var(--hint);font-size:9px">今日会话: 0</span>
+              <div class="goal-set">
+                <input type="number" id="goalInput" value="120" min="10" max="600">
+                <label>分钟目标</label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Session Goal -->
+        <div class="sec">
+          <div class="sec-title">本次目标</div>
+          <div class="goal-ring-wrap">
+            <div class="goal-ring">
+              <svg width="60" height="60" viewBox="0 0 60 60">
+                <circle cx="30" cy="30" r="26" fill="none" stroke="var(--border)" stroke-width="4" />
+                <circle cx="30" cy="30" r="26" fill="none" stroke="var(--blue)" stroke-width="4" stroke-linecap="round"
+                  stroke-dasharray="163.36" stroke-dashoffset="163.36" id="sessionGoalArc" />
+              </svg>
+              <div class="goal-ring-pct" id="sessionGoalPct" style="color:var(--blue)">0%</div>
+            </div>
+            <div class="goal-info">
+              <span id="sessionGoalProgress">0m / 60m 专注</span>
+              <span id="sessionGoalStatus" style="color:var(--hint);font-size:9px">当前会话进度</span>
+              <div class="goal-set">
+                <input type="number" id="sessionGoalInput" value="60" min="5" max="600">
+                <label>分钟目标</label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+
+
+
+      <!-- Focus Streaks -->
+      <div class="sec">
+        <div class="sec-title">连续专注</div>
+        <div class="streak-row">
+          <div class="streak-item">
+            <div class="streak-num" id="curStreak" style="color:var(--blue)">0:00</div>
+            <div class="streak-lbl">当前</div>
+          </div>
+          <div class="streak-item">
+            <div class="streak-num" id="bestStreak" style="color:var(--amber)">0:00</div>
+            <div class="streak-lbl">今日最高</div>
+          </div>
+          <div class="streak-item">
+            <div class="streak-num" id="allTimeBest" style="color:var(--green)">0:00</div>
+            <div class="streak-lbl">历史最高</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Session Timeline -->
+      <div class="sec">
+        <div class="sec-title">
+          <span>时间线</span>
+          <span class="sec-title-right">
+            <span style="color:var(--green);font-size:9px">■ 专注</span>
+            <span style="color:var(--amber);font-size:9px">■ 部分</span>
+            <span style="color:var(--red-d);font-size:9px">■ 离开</span>
+          </span>
+        </div>
+        <div class="tl-bars" id="tlBars"></div>
+      </div>
+
+      <!-- Weekly Heatmap -->
+      <div class="sec">
+        <div class="sec-title">每周专注</div>
+        <div class="heatmap-wrap">
+          <div class="heatmap" id="heatmap"></div>
+        </div>
+      </div>
+
+
+      <!-- Event Log -->
+      <div class="sec">
+        <div class="sec-title">事件日志</div>
+        <div class="ev-list" id="evList">
+          <div class="ev"><span class="ev-t">-</span><span class="ev-g">等待摄像头...</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <div class="pause-overlay" id="pauseOverlay">
+    <div class="pause-icon">||</div>
+    <div class="pause-label">已暂停</div>
+    <div class="pause-quote" id="pauseQuote"></div>
+    <div class="pause-author" id="pauseAuthor"></div>
+    <div class="pause-hint">按 <kbd>空格键</kbd> 恢复</div>
+  </div>
+
+  <div class="distracted-popup" id="distractedPopup">
+    <div class="dp-label">分心</div>
+    <div class="dp-time" id="dpTime">0:00</div>
+    <div class="dp-sub">离开专注的时间</div>
+  </div>
+
+  <!-- Session Summary Modal -->
+  <div class="summary-modal" id="summaryModal">
+    <div class="summary-card">
+      <div class="summary-title">会话摘要</div>
+      <div class="summary-grid">
+        <div class="summary-stat">
+          <div class="summary-stat-lbl">会话时长</div>
+          <div class="summary-stat-val" id="sumDuration" style="color:var(--amber)">--:--</div>
+        </div>
+        <div class="summary-stat">
+          <div class="summary-stat-lbl">专注时间</div>
+          <div class="summary-stat-val" id="sumFocus" style="color:var(--green)">--:--</div>
+        </div>
+        <div class="summary-stat">
+          <div class="summary-stat-lbl">专注%</div>
+          <div class="summary-stat-val" id="sumFocusPct" style="color:var(--green)">--%</div>
+        </div>
+        <div class="summary-stat">
+          <div class="summary-stat-lbl">分心次数</div>
+          <div class="summary-stat-val" id="sumDistractions" style="color:var(--red-d)">0</div>
+        </div>
+        <div class="summary-stat">
+          <div class="summary-stat-lbl">最佳连胜</div>
+          <div class="summary-stat-val" id="sumBestStreak" style="color:var(--blue)">0:00</div>
+        </div>
+        <div class="summary-stat">
+          <div class="summary-stat-lbl">眨眼次数</div>
+          <div class="summary-stat-val" id="sumBlinks" style="color:var(--purple)">0</div>
+        </div>
+        <div class="summary-stat">
+          <div class="summary-stat-lbl">姿势分数 (平均)</div>
+          <div class="summary-stat-val" id="sumPosture" style="color:var(--blue)">--</div>
+        </div>
+        <div class="summary-stat">
+          <div class="summary-stat-lbl">番茄钟轮数</div>
+          <div class="summary-stat-val" id="sumPomo" style="color:var(--amber)">0</div>
+        </div>
+      </div>
+      <div class="summary-motivation" id="sumMotivation">--</div>
+      <div class="summary-actions">
+        <button class="summary-close" id="summaryCloseBtn">关闭</button>
+        <button class="summary-export" id="summaryExportBtn">导出并关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- DoNotPlay！ 全屏警报弹窗 -->
+  <div class="donotplay-popup" id="doNotPlayPopup">
+    <div class="donotplay-content">
+      <div class="donotplay-icon">🚫</div>
+      <div class="donotplay-title">DoNotPlay！</div>
+      <div class="donotplay-sub">检测到手机使用 — 请立刻放下手机</div>
+      <button class="donotplay-btn" id="doNotPlayDismissBtn">我已放下手机</button>
+    </div>
+  </div>
+
+  <!-- 驼背警告弹窗 -->
+  <div class="posture-warning-popup" id="postureWarningPopup">
+    <div class="donotplay-content">
+      <div class="donotplay-icon">🦴</div>
+      <div class="donotplay-title">请挺直腰背！</div>
+      <div class="donotplay-sub">检测到您持续驼背，请注意保护颈椎</div>
+      <button class="donotplay-btn" id="postureDismissBtn">我已坐直</button>
+    </div>
+  </div>
+
+  <!-- 疲劳警告弹窗 -->
+  <div class="drowsy-warning-popup" id="drowsyWarningPopup">
+    <div class="donotplay-content">
+      <div class="donotplay-icon">💤</div>
+      <div class="donotplay-title">您似乎很疲惫！</div>
+      <div class="donotplay-sub">系统检测到您处于疲劳状态，请闭目休息片刻</div>
+      <button class="donotplay-btn" id="drowsyDismissBtn">我已清醒</button>
+    </div>
+  </div>
+
+  <!-- 分心警告弹窗 -->
+  <div class="distracted-warning-popup" id="distractedWarningPopup">
+    <div class="donotplay-content">
+      <div class="donotplay-icon">⚠️</div>
+      <div class="donotplay-title" style="text-shadow: 0 4px 30px rgba(255, 120, 0, 0.6);">你好像不在状态</div>
+      <div class="donotplay-sub">系统检测到您当前分心，请收回注意力</div>
+      <button class="donotplay-btn" id="distractedDismissBtn">我已恢复专注</button>
+    </div>
+  </div>
+
+  <!-- 人脸离开预警弹窗 -->
+  <div class="away-warning-popup" id="awayWarningPopup">
+    <div class="donotplay-content">
+      <div class="donotplay-icon" style="font-size: 150px;">😭</div>
+      <div class="donotplay-title" style="font-size: 64px;">你快回来</div>
+      <div class="donotplay-sub" style="font-size: 24px; color: rgba(255,255,255,0.8); margin-top: 10px;">我一个人承受不来
+      </div>
+      <button class="donotplay-btn" id="awayDismissBtn" style="margin-top: 40px;">我回来了</button>
+    </div>
+  </div>
+
+  <div class="kbd-hint">
+    <kbd>S</kbd> 灵敏度 &nbsp; <kbd>C</kbd> 校准 &nbsp; <kbd>M</kbd> 静音 &nbsp; <kbd>T</kbd> 主题 &nbsp; <kbd>E</kbd> 导出
+    &nbsp; <kbd>Q</kbd> 摘要 &nbsp;
+    <kbd>空格键</kbd> 暂停 &nbsp; <kbd>P</kbd> 番茄钟 &nbsp; <kbd>N</kbd> 跳过
+  </div>
+
+  <!-- ML 处理已迁移到 Python 后端 (server.py) -->
+  <!-- 前端仅通过 WebSocket 接收数据，通过 MJPEG 显示画面 -->
+  <script src="app.js"></script>
+</body>
+
+</html>
