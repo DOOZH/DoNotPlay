@@ -49,3 +49,17 @@ Using pure, local computer vision technology (your privacy is 100% safe—no dat
 🚀 Current Status (Beta)
 Please note that this project is currently a Work in Progress (WIP) and not yet a finalized commercial product. You might encounter occasional bugs or false alerts.
 Feel free to download it, try it out, and let it act as your digital "second brain" for self-discipline. Feedback, bug reports, and pull requests are highly welcome!
+
+
+## 🙏 致谢 (Acknowledgements)
+
+本项目的开发依赖于开源社区的贡献。特别感谢以下项目与工具：
+
+* **[Focus Monitor](https://github.com/infinity811/focus-monitor)**：本项目的前端 UI 界面、番茄钟逻辑和数据保存功能，均参考并修改自该项目。感谢原作者（基于 MIT 许可证）提供的优秀代码！
+* **[Ultralytics YOLOv8](https://github.com/ultralytics/ultralytics)**：它为本项目提供了毫秒级的本地目标检测（如识别手机）能力（基于 AGPL-3.0 许可证）。
+* **[Google MediaPipe](https://github.com/google/mediapipe)**：它提供了面部关键点与身体骨骼追踪技术。这是实现疲劳和体态检测的基础。
+
+## 📄 开源许可证 (License)
+
+本项目整体采用 **AGPL-3.0 License** 进行开源。
+*(注：本项目前端部分修改自遵循 MIT 协议的 Focus Monitor)*
