@@ -25,30 +25,7 @@ DoNotPlay 是一款基于人工智能视觉的桌面工具，它通过监控疲�
 🚀 当前状态 (Beta)
 本项目目前仍处于早期开发阶段（Work in Progress），并不是一个完美的正式成品。它可能存在一些误报或不稳定的地方。
 我非常欢迎大家下载尝试，把它当作你的“数字自律外脑”。如果你有任何改进建议或发现了 Bug，请随时提交 Issue 或 PR！
-
-🛡️ DoNotPlay - Your AI-Powered Focus Guardian
-"Focus fiercely now, so you can play guilt-free later."
-
-Do you constantly struggle with shifting attention and digital distractions? DoNotPlay is a desktop AI tool engineered specifically for those who find it hard to stay in the zone.
-
-💡 The Philosophy: Why "DoNotPlay"?
-Time is a constant. When you procrastinate or get distracted during work hours, you are simply borrowing time from your future relaxation.
-Despite the strict name DoNotPlay, the ultimate goal of this project is to help you Play More. By maximizing your efficiency and keeping you intensely focused when it matters, you earn back your time to rest and play without any guilt.
-
-✨ Core Features
-Using pure, local computer vision technology (your privacy is 100% safe—no data is uploaded), DoNotPlay turns your webcam into an uncompromising accountability partner:
-
-👁️ Multi-Dimensional Tracking: Real-time analysis of your eye gaze, hand movements, and head posture.
-
-📱 Distraction & Phone Detection: Instantly recognizes if you are using your phone or looking away from your workspace.
-
-💤 Fatigue Assessment: Scientifically evaluates your fatigue levels by monitoring blink rates (PERCLOS), yawning, and head-nodding, reminding you when it's time to take a real break.
-
-🎯 Smart Context Filtering: The algorithm is fine-tuned to minimize false positives during legitimate work activities, such as reading a physical book or typing on a keyboard.
-
-🚀 Current Status (Beta)
-Please note that this project is currently a Work in Progress (WIP) and not yet a finalized commercial product. You might encounter occasional bugs or false alerts.
-Feel free to download it, try it out, and let it act as your digital "second brain" for self-discipline. Feedback, bug reports, and pull requests are highly welcome!
+你也可以考虑赞助我，这样我可以开通copilot来加速开发！<img width="1280" height="1745" alt="image" src="https://github.com/user-attachments/assets/4f842d17-174d-4e7f-9d54-d33d8d560368" />
 
 
 ## 🙏 致谢 (Acknowledgements)
