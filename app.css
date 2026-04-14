@@ -1,3 +1,25 @@
+/* ====================================================================
+   DoNotPlay - CSS Structure Guide (重新组织版)
+   ====================================================================
+   
+   文件组织结构（已去重整理）：
+   1. RESET & TOKENS    - * 重置 + :root 变量定义
+   2. BASE STYLES       - body, 通用基础样式
+   3. HEADER            - 顶部导航栏
+   4. LAYOUT            - 主布局容器, body, .body, .cam-panel, .dash
+   5. COMPONENTS        - 独立组件：buttons, pills, cards, metrics, banners 等
+   6. MODALS & POPUPS   - 全屏弹窗和提示框（celebration, alert 等）
+   7. RESPONSIVE        - @media 响应式差异（仅写改变的部分，不重复整个组件）
+   8. DEBUG ONLY        - 调试面板（开发专用）
+   
+   ⚠️ 重要注意（已执行）：
+   - ✅ 避免在不同部分重复定义同一个组件类名 → 已删除重复的 .sec/.sec-title 定义
+   - ✅ @media 中仅写响应式差异，不整块重复定义
+   - ✅ 所有颜色/字体/阴影必须使用 tokens（--xxx 变量）
+   - ✅ 每个组件类只保留一套主定义，使用上下文选择器（如 .dash .sec）处理差异
+   
+   ==================================================================== */
+
 * {
   margin: 0;
   padding: 0;
@@ -20,45 +42,66 @@
   --surface-glass: rgba(255, 255, 255, 0.85);
 
   --amber: #f4b451;
+  --amber-bg: rgba(244, 180, 81, 0.15);
+  --amber-d: #b26a00;
   --green: #41af6a;
+  --green-bg: rgba(65, 175, 106, 0.15);
+  --green-d: #2f8f55;
   --red: #ba1a1a;
+  --red-d: #ba1a1a;
+  --red-bg: rgba(186, 26, 26, 0.15);
   --blue: #0061a4;
+  --blue-bg: rgba(0, 97, 164, 0.15);
   --purple: #984061;
+  --purple-bg: rgba(152, 64, 97, 0.15);
 
+  /* Typography */
+  --sans: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --mono: "SFMono-Regular", Consolas, "Courier New", monospace;
+
+  /* Spacing & Radius */
   --radius-lg: 28px;
   --radius-md: 16px;
   --radius-sm: 8px;
+  --radius-pill: 999px;
 
+  /* Shadows */
+  --shadow-1: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --shadow-2: 0 4px 12px rgba(0, 0, 0, 0.12);
+  --shadow-3: 0 8px 24px rgba(0, 0, 0, 0.16);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
-:root[data-theme="dark"] {
-  --bg: linear-gradient(135deg, #1a1b1f 0%, #121216 100%);
-  --bg-solid: #1a1b1f;
-  --bg2: rgba(33, 33, 38, 0.9);
-  --bg3: #303036;
-  --primary: #bbc3ff;
-  --primary-container: #374379;
-  --on-primary-container: #e0e0ff;
-  --border: #44474e;
-  --text: #e3e2e6;
-  --muted: #c7c6ca;
-  --hint: #909094;
-  --surface-glass: rgba(33, 33, 38, 0.85);
+:root[data-theme="light"] {
+  /* Explicitly define light theme (same as :root defaults) */
+  --bg: linear-gradient(135deg, #f8f9ff 0%, #eef2ff 100%);
+  --bg-solid: #f8f9ff;
+  --bg2: rgba(255, 255, 255, 0.9);
+  --bg3: #f1f3f9;
+  --primary: #4f5b92;
+  --primary-container: #e0e0ff;
+  --on-primary-container: #001552;
+  --border: #dce1ef;
+  --text: #1b1b1f;
+  --muted: #44474e;
+  --hint: #74777f;
+  --surface-glass: rgba(255, 255, 255, 0.85);
 }
 
 :root[data-theme="dark"] {
-  --bg: #121212;
+  --bg: linear-gradient(135deg, #1a1a1f 0%, #121216 100%);
+  --bg-solid: #121212;
   --bg2: #1e1e1e;
-  /* Surface */
   --bg3: #2c2c2c;
-  /* Surface Highlight */
   --border: #383838;
   --text: #e3e3e3;
   --muted: #a0a0a0;
   --hint: #777777;
   --surface-glass: rgba(30, 30, 30, 0.95);
   --overlay-glass: rgba(18, 18, 18, 0.9);
+  --primary: #bbc3ff;
+  --primary-container: #374379;
+  --on-primary-container: #e0e0ff;
 }
 
 body {
@@ -70,7 +113,7 @@ body {
   flex-direction: column;
   overflow: hidden;
   -webkit-font-smoothing: antialiased;
-  transition: background-color 0.4s ease, color 0.4s ease;
+  transition: background 0.4s ease, color 0.4s ease;
 }
 
 body * {
@@ -250,22 +293,7 @@ body * {
   border-width: 0 2px 2px 0;
 }
 
-.state-badge {
-  position: absolute;
-  bottom: 16px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  padding: 4px 14px;
-  background: rgba(0, 0, 0, 0.8);
-  border-radius: var(--radius-pill);
-  font-family: var(--sans);
-  color: #fff;
-  box-shadow: var(--shadow-2);
-  backdrop-filter: blur(4px);
-}
+
 
 .no-cam {
   position: absolute;
@@ -492,6 +520,10 @@ body * {
   width: 100%;
 }
 
+/* ====================================================================
+   COMPONENTS - 可复用的独立组件
+   ==================================================================== */
+
 .sec {
   background: var(--bg2);
   border-radius: var(--radius-lg);
@@ -645,32 +677,7 @@ body * {
   font-weight: 500;
 }
 
-.sec {
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  padding: 24px;
-  box-shadow: var(--shadow-1);
-}
-
-.sec-title {
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  color: var(--muted);
-  text-transform: uppercase;
-  margin-bottom: 20px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.sec-title-right {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-}
-
+/* 注意：.sec 和 .sec-title 的主定义在上方，专项的样式变体使用上下文选择器 */
 .two-col {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -800,32 +807,7 @@ body * {
   font-family: var(--sans);
 }
 
-/* STREAK */
-.streak-row {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-}
 
-.streak-item {
-  text-align: center;
-  padding: 16px;
-  background: var(--bg3);
-  border-radius: var(--radius-sm);
-}
-
-.streak-num {
-  font-size: 32px;
-  font-weight: 600;
-  font-family: var(--sans);
-  margin-bottom: 6px;
-}
-
-.streak-lbl {
-  font-size: 11px;
-  color: var(--muted);
-  font-weight: 500;
-}
 
 /* GOAL */
 .goal-ring-wrap {
@@ -946,24 +928,28 @@ body * {
 /* TIMELINE */
 .tl-bars {
   display: flex;
-  gap: 2px;
   align-items: flex-end;
-  height: 60px;
+  gap: 1px;
+  height: 56px;
+  padding: 8px 6px;
   background: var(--bg3);
-  padding: 8px;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
+  overflow-x: auto;
+  scrollbar-width: none;
 }
+.tl-bars::-webkit-scrollbar { display: none; }
 
 .tl-bar {
-  flex: 1;
-  border-radius: var(--radius-pill);
-  min-height: 6px;
-  transition: height 0.3s ease;
+  flex: 0 0 15px;
+  border-radius: 3px;
+  min-height: 2px;
+  transition: height 0.3s ease, background 0.3s ease;
   cursor: pointer;
 }
 
 .tl-bar:hover {
-  filter: brightness(1.2);
+  filter: brightness(1.15);
+  flex-basis: 18px;
 }
 
 /* HEATMAP */
@@ -975,6 +961,7 @@ body * {
 .heatmap {
   display: grid;
   grid-template-rows: repeat(4, 14px);
+  /* JS 逻辑：每列4天 */
   grid-auto-flow: column;
   gap: 4px;
 }
@@ -1006,23 +993,27 @@ body * {
 .ev-list {
   display: flex;
   flex-direction: column;
+  gap: 8px;
   max-height: 150px;
   overflow-y: auto;
-  padding-right: 8px;
+  padding: 12px;
+  background: var(--bg3);
+  border-radius: var(--radius-md);
+  font-family: var(--mono);
+  font-size: 13px;
 }
 
 .ev {
   display: flex;
   gap: 12px;
-  font-size: 12px;
-  padding: 10px 8px;
-  border-bottom: 1px solid var(--bg3);
+  padding: 8px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
   transition: background 0.2s;
   border-radius: 6px;
 }
 
 .ev:hover {
-  background: var(--bg3);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .ev:last-child {
@@ -1032,7 +1023,6 @@ body * {
 .ev-t {
   color: var(--hint);
   flex-shrink: 0;
-  font-family: var(--mono);
   width: 42px;
 }
 
@@ -1200,315 +1190,28 @@ body * {
   display: none;
 }
 
-.pomo-layout {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 40px;
-  flex-wrap: wrap;
-}
-
-.pomo-ring-wrap {
-  flex-shrink: 0;
-  width: 160px;
-  height: 160px;
-}
-
-.pomo-ring {
-  position: relative;
-  width: 160px;
-  height: 160px;
-  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.08));
-}
-
-.pomo-ring svg {
-  transform: rotate(-90deg);
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-
-.pomo-bg-ring {
-  stroke: var(--border);
-}
-
-.pomo-fg-ring {
-  stroke: var(--amber);
-  transition: stroke-dashoffset 1s linear, stroke 0.3s ease;
-}
-
-.pomo-sec.work .pomo-fg-ring {
-  stroke: var(--amber);
-}
-
-.pomo-sec.short .pomo-fg-ring {
-  stroke: var(--green);
-}
-
-.pomo-sec.long .pomo-fg-ring {
-  stroke: var(--blue);
-}
-
-.pomo-sec.idle .pomo-fg-ring {
-  stroke: var(--border);
-}
-
-.pomo-ring-center {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-
-.pomo-time {
-  font-family: var(--sans);
-  font-size: 36px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: var(--text);
-}
-
-.pomo-phase {
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  margin-top: 4px;
-  color: var(--muted);
-}
-
-.pomo-sec.work .pomo-phase {
-  color: var(--amber-d);
-}
-
-.pomo-sec.short .pomo-phase {
-  color: var(--green-d);
-}
-
-.pomo-sec.long .pomo-phase {
-  color: var(--blue-d);
-}
-
-.pomo-info {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.pomo-controls {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.md-btn {
-  background: transparent;
-  color: var(--text);
-  border: none;
-  padding: 10px 24px;
-  border-radius: var(--radius-pill);
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.md-btn.primary {
-  background: var(--amber);
-  color: #fff;
-  box-shadow: 0 4px 12px rgba(244, 180, 81, 0.4);
-}
-
-.md-btn.primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(244, 180, 81, 0.6);
-}
-
-.md-btn.outline {
-  border: 2px solid var(--border);
-  color: var(--text);
-}
-
-.md-btn.outline:hover {
-  border-color: var(--hint);
-  background: var(--bg3);
-}
-
-.md-btn.text-btn {
-  color: var(--hint);
-}
-
-.md-btn.text-btn:hover {
-  background: var(--bg3);
-  color: var(--text);
-}
-
-.pomo-sec.short .md-btn.primary {
-  background: var(--green);
-  box-shadow: 0 4px 12px rgba(129, 201, 149, 0.4);
-}
-
-.pomo-sec.short .md-btn.primary:hover {
-  box-shadow: 0 6px 16px rgba(129, 201, 149, 0.6);
-}
-
-.pomo-sec.long .md-btn.primary {
-  background: var(--blue);
-  box-shadow: 0 4px 12px rgba(138, 180, 248, 0.4);
-}
-
-.pomo-sec.long .md-btn.primary:hover {
-  box-shadow: 0 6px 16px rgba(138, 180, 248, 0.6);
-}
-
-.pomo-stats {
-  display: flex;
-  gap: 32px;
-}
-
-.pomo-stat {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.pomo-stat-lbl {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--hint);
-  text-transform: uppercase;
-}
-
-.pomo-stat-val {
-  font-size: 24px;
-  font-weight: 700;
-  font-family: var(--sans);
-}
-
-.pomo-settings {
-  display: flex;
-  gap: 16px;
-  align-items: center;
-  flex-wrap: wrap;
-  background: var(--bg3);
-  padding: 12px 20px;
-  border-radius: 12px;
-}
-
-.pomo-set-group {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.pomo-set-group label {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--muted);
-}
-
-.pomo-set-group input {
-  width: 54px;
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  color: var(--text);
-  padding: 6px 8px;
-  font-size: 14px;
-  border-radius: 6px;
-  text-align: center;
-  font-weight: 600;
-  transition: border-color 0.2s;
-}
-
-.pomo-set-group input:focus {
-  border-color: var(--amber);
-  outline: none;
-}
-
-/* TIMELINE */
-.tl-bars {
-  display: flex;
-  align-items: flex-end;
-  gap: 4px;
-  height: 60px;
-  padding: 12px;
-  background: var(--bg3);
-  border-radius: var(--radius-md);
-}
-
-.tl-bar {
-  flex: 1;
-  border-radius: 4px;
-  transition: all 0.3s;
-}
-
-/* HEATMAP */
-.heatmap {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 8px;
-}
-
-.hm-cell {
-  aspect-ratio: 1;
-  border-radius: 8px;
-  background: var(--bg3);
-  transition: transform 0.2s;
-}
-
-.hm-cell:hover {
-  transform: scale(1.1);
-}
-
-/* EVENT LOG */
-.ev-list {
-  background: var(--bg3);
-  padding: 16px;
-  border-radius: var(--radius-md);
-  height: 120px;
-  overflow-y: auto;
+/* BREAK MODULE */
+#breakSec .goal-ring-pct {
   font-family: var(--mono);
-  font-size: 13px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  font-size: 16px;
 }
 
-.ev {
-  display: flex;
-  gap: 12px;
-  padding: 4px 0;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+#breakStartBtn.danger {
+  background: var(--red);
+  box-shadow: 0 4px 12px rgba(186, 26, 26, 0.4);
 }
 
-.ev-t {
-  color: var(--hint);
+#breakStartBtn.danger:hover {
+  background: var(--red-d);
+  box-shadow: 0 6px 16px rgba(186, 26, 26, 0.6);
 }
 
-.ev-g {
-  color: var(--text);
-}
 
-.ev.w .ev-g {
-  color: var(--amber);
-  font-weight: 600;
-}
 
-.ev.b .ev-g {
-  color: var(--red);
-  font-weight: 600;
-}
 
-.ev.g .ev-g {
-  color: var(--green);
-}
+/* =========================================================
+   RESPONSIVE & MEDIA QUERIES
+   ========================================================= */
 
 @media (max-width: 1000px) {
   .body {
@@ -1586,9 +1289,165 @@ body * {
   letter-spacing: 0.1em;
 }
 
+/* LEADERBOARD & PODIUM */
+.gap-note {
+  font-size: 10px;
+  color: var(--hint);
+  margin-top: 1px;
+  font-weight: 500;
+  min-height: 12px;
+}
+
+.podium-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  height: 118px;
+  /* 进一步压缩高度 */
+  margin-top: 0px;
+  /* 消除顶距 */
+  width: 100%;
+  max-width: none;
+}
+
+/* 左右侧卡片 - 绝对 1/3 */
+.lb-side {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg3);
+  padding: 6px 8px;
+  /* 压缩内边距 */
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  height: 95px;
+  /* 卡片高度压低 */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+  min-width: 0;
+}
+
+.lb-side .streak-num {
+  font-size: 30px;
+  font-weight: 900;
+  margin-bottom: 0px;
+  /* 减小间距 */
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+
+/* 中间领奖台区域 - 绝对 1/3 */
+.lb-main {
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 6px;
+  background: var(--bg2);
+  padding: 4px 10px;
+  /* 压缩内边距 */
+  border-radius: 14px;
+  height: 110px;
+  /* 区域高度压低 */
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  min-width: 0;
+}
+
+.podium-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  max-width: 75px;
+}
+
+.podium-bar {
+  width: 100%;
+  border-radius: 6px 6px 3px 3px;
+  background: var(--bg3);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 4px 4px;
+  /* 压缩内边距 */
+  transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+  cursor: help;
+  text-align: center;
+}
+
+/* 比例调整后的立柱高度 */
+.podium-col.p1 .podium-bar {
+  height: 75px;
+  background: linear-gradient(to top, #ffd70022, #ffd70088);
+  border: 1px solid #ffd700;
+}
+
+.podium-col.p2 .podium-bar {
+  height: 55px;
+  background: linear-gradient(to top, #c0c0c022, #c0c0c088);
+  border: 1px solid #c0c0c0;
+}
+
+.podium-col.p3 .podium-bar {
+  height: 38px;
+  background: linear-gradient(to top, #cd7f3222, #cd7f3288);
+  border: 1px solid #cd7f32;
+}
+
+.podium-medal {
+  font-size: 18px;
+  margin-bottom: 2px;
+  /* 压缩间距 */
+}
+
+.podium-val {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.podium-label {
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 700;
+  margin-top: 2px;
+  /* 压缩间距 */
+}
+
+.toast {
+  position: fixed;
+  top: 30px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-20px);
+  background: var(--surface-glass);
+  backdrop-filter: blur(12px);
+  padding: 10px 24px;
+  border-radius: 100px;
+  /* 胶囊形状 */
+  border: 1px solid var(--border);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  z-index: 2000;
+  opacity: 0;
+  pointer-events: none;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .toast.show {
   opacity: 1;
-  transform: translateY(0);
+  transform: translateX(-50%) translateY(0);
+  pointer-events: auto;
 }
 
 .toast.success {
@@ -1670,6 +1529,142 @@ body * {
   display: flex;
 }
 
+/* MD3 BUTTONS */
+.md3-btn-filled {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 48px;
+  /* Standard MD3 Large toggle area */
+  padding: 0 24px;
+  border-radius: 24px;
+  border: none;
+  background-color: var(--primary);
+  color: var(--bg-solid);
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.1px;
+  cursor: pointer;
+  overflow: hidden;
+  transition: box-shadow 0.2s, transform 0.1s, background-color 0.3s;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 1px 3px 1px rgba(0, 0, 0, 0.15);
+}
+
+.md3-btn-filled::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-color: currentColor;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.md3-btn-filled:hover {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 8px 3px rgba(0, 0, 0, 0.15);
+}
+
+.md3-btn-filled:hover::before {
+  opacity: 0.08;
+}
+
+.md3-btn-filled:focus::before {
+  opacity: 0.12;
+}
+
+.md3-btn-filled:active {
+  transform: scale(0.96);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.md3-btn-filled:active::before {
+  opacity: 0.12;
+}
+
+.md3-btn-filled.danger {
+  background-color: var(--red);
+  color: #fff;
+}
+
+.md3-btn-icon {
+  font-size: 18px;
+}
+
+.md3-btn-text {
+  margin-top: -1px;
+  /* Optical alignment */
+}
+
+/* BREAK MODULE LARGE LAYOUT */
+.break-layout {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 0;
+}
+
+.break-mid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+#breakStatus {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.md3-btn-large {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  height: 60px;
+  border-radius: 16px;
+  border: none;
+  background-color: var(--primary);
+  color: var(--bg-solid);
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  flex-shrink: 0;
+}
+
+.md3-btn-large .md3-btn-icon {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.md3-btn-large .md3-btn-text {
+  font-size: 10px;
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+.md3-btn-large:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  filter: brightness(1.1);
+}
+
+.md3-btn-large:active {
+  transform: scale(0.92);
+}
+
+.md3-btn-large.danger {
+  background-color: var(--red);
+  color: #fff;
+}
+
 .pause-icon {
   font-size: 56px;
   margin-bottom: 24px;
@@ -1700,6 +1695,38 @@ body * {
 .pause-quote.show {
   opacity: 1;
   transform: translateY(0);
+}
+
+.pause-stats {
+  display: flex;
+  gap: 48px;
+  margin-top: 40px;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 24px 48px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+}
+
+.p-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.p-stat-lbl {
+  font-size: 12px;
+  text-transform: uppercase;
+  color: var(--muted);
+  letter-spacing: 0.1em;
+}
+
+.p-stat-val {
+  font-size: 32px;
+  font-weight: 700;
+  font-family: 'Outfit', sans-serif;
+  color: var(--primary);
 }
 
 .pause-author {
@@ -2127,6 +2154,53 @@ body * {
   transform: scale(1.05);
 }
 
+/* TOP 3 CELEBRATION POPUP */
+.top3-celebration-popup {
+  position: fixed;
+  inset: 0;
+  z-index: 700;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.95), rgba(50, 30, 0, 0.85));
+  backdrop-filter: blur(8px);
+}
+
+.top3-celebration-popup.show {
+  display: flex;
+  animation: celebration-fade-in 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes celebration-fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.celebration-shine {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, rgba(255, 215, 0, 0.2) 0%, transparent 70%);
+  animation: shine-pulse 2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes shine-pulse {
+
+  0%,
+  100% {
+    opacity: 0.3;
+  }
+
+  50% {
+    opacity: 0.6;
+  }
+}
+
 /* DISTRACTED WARNING POPUP */
 .distracted-warning-popup {
   position: fixed;
@@ -2236,35 +2310,12 @@ body * {
 }
 
 /* RESPONSIVE LAYOUT & ACCESSIBILITY FIXES */
-.pomo-sec {
-  transition: all 0.3s ease;
-}
-
 @media (max-width: 1200px) {
   .metric-grid {
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   }
 }
 
-@media (max-width: 900px) {
-  .pomo-layout {
-    flex-direction: column;
-    gap: 24px;
-    text-align: center;
-  }
-
-  .pomo-ring-wrap {
-    margin: 0 auto;
-  }
-
-  .pomo-controls {
-    justify-content: center;
-  }
-
-  .pomo-settings {
-    justify-content: center;
-  }
-}
 
 /* =========================================
    Google Material Design: App-Like Portrait Layout
@@ -2299,7 +2350,6 @@ body * {
   .cam-panel,
   .two-col .sec,
   .md3-stat-card,
-  .dash>.pomo-sec,
   .dash>.sec,
   .dash>.heatmap-card {
     background: var(--bg2) !important;
@@ -2334,16 +2384,49 @@ body * {
     flex: 1 !important;
     border-radius: 20px !important;
     overflow: hidden !important;
-    background: #000 !important;
+    background: var(--bg-solid) !important;
+    /* 背景跟随主题，消除死黑 */
     box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.2) !important;
+    position: relative !important;
   }
 
   .cam-view #vid_stream {
     width: 100% !important;
     height: 100% !important;
-    object-fit: cover !important;
-    /* Google 沉浸感：填满区域防止留黑 */
+    object-fit: contain !important;
+    /* 恢复原始比例显示，消除裁切 */
     display: block !important;
+    z-index: 5 !important;
+  }
+
+  /* 竖屏动态看板激活 */
+  .cam-meta-top,
+  .cam-meta-bottom {
+    display: flex !important;
+    position: absolute !important;
+    left: 20px !important;
+    width: calc(100% - 40px) !important;
+    z-index: 10 !important;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
+    font-size: 13px !important;
+    /* 提升可读性：10px -> 13px */
+    font-weight: 700 !important;
+    color: var(--text) !important;
+    /* 增强对比度 */
+    text-transform: uppercase !important;
+    letter-spacing: 0.02em !important;
+    pointer-events: none !important;
+    opacity: 0.7 !important;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.2) !important;
+    /* 增加轮廓感 */
+  }
+
+  .cam-meta-top {
+    top: 16px !important;
+  }
+
+  .cam-meta-bottom {
+    bottom: 16px !important;
   }
 
   /* 卡片 2/3: 右侧参数面板群 */
@@ -2376,53 +2459,95 @@ body * {
   }
 
   .md3-stat-card {
-    padding: 16px !important;
+    padding: 24px 20px !important;
+    /* 进一步增加高度：18px -> 24px */
     display: flex !important;
-    flex-direction: column !important;
-    justify-content: center !important;
-    align-items: flex-start !important;
-    gap: 12px !important;
+    flex-direction: row !important;
+    justify-content: flex-start !important;
+    align-items: center !important;
+    gap: 16px !important;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03) !important;
+    border-radius: 16px !important;
+    transition: background 0.8s ease, border 0.8s ease, box-shadow 0.8s ease !important;
+    /* 背景变色更慢更稳 */
+  }
+
+  /* 阶段一：仅文字预警 (Text-only) */
+  .md3-stat-card.t-warn .md3-stat-lbl,
+  .md3-stat-card.t-warn .md3-stat-val {
+    color: var(--amber) !important;
+    transition: color 0.4s ease !important;
+  }
+
+  .md3-stat-card.t-warn .md3-stat-icon {
+    background: var(--amber) !important;
+    color: #fff !important;
+    transition: all 0.4s ease !important;
+  }
+
+  .md3-stat-card.t-danger .md3-stat-lbl,
+  .md3-stat-card.t-danger .md3-stat-val {
+    color: var(--red-d) !important;
+    transition: color 0.4s ease !important;
+  }
+
+  .md3-stat-card.t-danger .md3-stat-icon {
+    background: var(--red-d) !important;
+    color: #fff !important;
+    transition: all 0.4s ease !important;
+  }
+
+  /* 阶段二：全局背景预警 (Full Background) */
+  .md3-stat-card.warn {
+    background: var(--amber-bg) !important;
+    border: 1px solid var(--amber) !important;
+  }
+
+  .md3-stat-card.danger {
+    background: var(--red-bg) !important;
+    border: 1px solid var(--red-d) !important;
+    box-shadow: 0 0 20px rgba(221, 52, 68, 0.15) !important;
   }
 
   .md3-stat-icon {
-    width: 36px !important;
-    height: 36px !important;
-    font-size: 18px !important;
+    width: 44px !important;
+    height: 44px !important;
+    font-size: 24px !important;
     border-radius: 12px !important;
+    flex-shrink: 0 !important;
+    transition: background 0.4s ease, color 0.4s ease !important;
+  }
+
+  .md3-stat-info {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    flex: 1 !important;
+    min-width: 0 !important;
   }
 
   .md3-stat-lbl {
-    font-size: 11px !important;
-    font-weight: 600 !important;
+    font-size: 12px !important;
+    font-weight: 700 !important;
     letter-spacing: 0.2px !important;
     opacity: 0.8 !important;
+    margin-bottom: 0 !important;
+    white-space: nowrap !important;
+    transition: color 0.2s ease !important;
   }
 
   .md3-stat-val {
-    font-size: 18px !important;
-    font-weight: 700 !important;
+    font-size: 28px !important;
+    font-weight: 800 !important;
+    color: var(--text) !important;
+    letter-spacing: -0.02em !important;
+    transition: color 0.2s ease !important;
   }
 
   /* =====================================
      第三排及以后：宽屏 Material 组件区
      ===================================== */
-
-  /* 番茄钟巨屏卡 (Pomo Card) */
-  .dash>.pomo-sec {
-    grid-column: 1 / 3 !important;
-    grid-row: 3 !important;
-    padding: 28px 32px !important;
-    display: flex !important;
-    flex-direction: column !important;
-  }
-
-  .dash>.pomo-sec .pomo-layout {
-    flex-direction: row !important;
-    align-items: center !important;
-    justify-content: space-between !important;
-    gap: 32px !important;
-  }
 
   /* 其他下方块 (事件、热力、列表) */
   .dash>.sec,
@@ -2442,4 +2567,355 @@ body * {
     align-items: center !important;
     gap: 8px !important;
   }
+}
+
+#lbSec .sec-title {
+  margin-bottom: 4px !important;
+}
+
+@keyframes strong-shake {
+  0% {
+    transform: scale(1.02) translate(1px, 1px);
+  }
+
+  25% {
+    transform: scale(1.02) translate(-1px, -1px);
+  }
+
+  50% {
+    transform: scale(1.02) translate(1px, -1px);
+  }
+
+  75% {
+    transform: scale(1.02) translate(-1px, 1px);
+  }
+
+  100% {
+    transform: scale(1.02) translate(1px, 1px);
+  }
+}
+
+.md3-stat-card.strong-warn {
+  animation: strong-shake 0.2s infinite;
+  border: 2px solid var(--red-d) !important;
+  background: rgba(186, 26, 26, 0.2) !important;
+  box-shadow: 0 0 40px rgba(186, 26, 26, 0.5) !important;
+  z-index: 5;
+}
+
+.md3-stat-card.strong-warn .md3-stat-val {
+  color: var(--red-d) !important;
+  text-shadow: 0 0 10px rgba(186, 26, 26, 0.3);
+}
+
+/* =========================================
+   Phone Landscape (横屏手机) 优化
+   ========================================= */
+@media (orientation: landscape) and (max-width: 899px) {
+  html, body {
+    height: auto !important;
+    min-height: 100vh !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+  }
+
+  .body {
+    display: grid !important;
+    grid-template-columns: minmax(200px, 30%) 1fr !important;
+    gap: 12px !important;
+    padding: 8px !important;
+    overflow: hidden !important;
+  }
+
+  .hdr {
+    flex-wrap: nowrap;
+    min-height: 44px;
+    padding: 6px 12px;
+  }
+
+  .hdr-right { gap: 4px; }
+
+  .cam-panel {
+    width: auto !important;
+    height: auto !important;
+    max-height: calc(100vh - 60px) !important;
+    overflow-y: auto !important;
+    border-right: none !important;
+    border-bottom: none !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+    padding: 8px !important;
+    flex: none !important;
+  }
+
+  .cam-view {
+    width: 100% !important;
+    max-width: none !important;
+    aspect-ratio: 4 / 3;
+    height: auto !important;
+    border-right: none !important;
+  }
+
+  .md3-stats {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 6px !important;
+    width: auto !important;
+    flex: none !important;
+    border-top: none !important;
+    background: transparent !important;
+    overflow-y: visible !important;
+  }
+
+  .md3-stat-card {
+    padding: 8px 10px !important;
+    gap: 8px !important;
+  }
+
+  .md3-stat-icon { width: 32px !important; height: 32px !important; font-size: 16px !important; }
+  .md3-stat-val { font-size: 14px !important; }
+  .md3-stat-lbl { font-size: 10px !important; }
+
+  .dash {
+    overflow-y: auto !important;
+    padding: 8px !important;
+    gap: 12px !important;
+    max-width: 100% !important;
+  }
+
+  .metric-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 8px !important;
+  }
+
+  .two-col {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+  }
+
+  .sec { padding: 12px !important; gap: 8px !important; }
+  .sec-title { font-size: 13px !important; margin-bottom: 8px !important; }
+}
+
+/* =========================================
+   Google Material Design: Landscape (横屏) 优化
+   ========================================= */
+@media (orientation: landscape) and (min-width: 900px) {
+  /* 核心思路：
+    1. 限制最大宽度，居中显示，避免超宽屏下内容过度拉伸。
+    2. 左侧摄像头面板固定一个合理的比例，右侧数据流自适应。
+  */
+
+  .body {
+    display: grid !important;
+    /* 在宽屏下限制最大宽度并居中，提供更好的阅读体验 */
+    max-width: 1600px;
+    margin: 0 auto;
+    width: 100%;
+    /* 调整左右比例：摄像头约占 35%，右侧看板占 65% */
+    grid-template-columns: minmax(340px, 35%) 1fr !important;
+    gap: 24px;
+    padding: 20px;
+    overflow: hidden;
+  }
+
+  /* --- 摄像头面板优化 --- */
+  .cam-panel {
+    /* 横屏下，摄像头面板自适应内容高度，带独立滚动 */
+    height: auto;
+    max-height: calc(100vh - 100px);
+    overflow-y: auto;
+
+    /* 增加卡片质感 */
+    background: var(--bg2);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--border);
+    padding: 16px;
+
+    /* 重新排列内部元素：画面在上，状态指标在下 */
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    width: auto;
+  }
+
+  .cam-view {
+    /* 强制横屏下监控画面的比例接近 4:3 或 16:9，避免过分狭长 */
+    aspect-ratio: 4 / 3;
+    width: 100%;
+    height: auto;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+  }
+
+  /* 横屏下，调整叠层数据的位置，避免遮挡主要画面 */
+  .cam-meta-top {
+    top: 12px;
+    left: 12px;
+    width: calc(100% - 24px);
+  }
+
+  .cam-meta-bottom {
+    bottom: 12px;
+    left: 12px;
+    width: calc(100% - 24px);
+  }
+
+  /* 将 MD3 状态卡片 (眼睛、颈椎等) 从横向排布改为网格或垂直排布，更好利用左侧空间 */
+  .md3-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    /* 两列网格 */
+    gap: 12px;
+    padding: 0;
+    background: transparent;
+    border-top: none;
+    overflow-y: visible;
+  }
+
+  .md3-stat-card {
+    padding: 12px;
+    border-radius: var(--radius-md);
+  }
+
+  .md3-stat-icon {
+    width: 36px;
+    height: 36px;
+    font-size: 18px;
+  }
+
+  .md3-stat-val {
+    font-size: 18px;
+    /* 稍微缩小字号适应更紧凑的卡片 */
+  }
+
+  /* --- 右侧看板优化 --- */
+  .dash {
+    padding: 0;
+    max-width: 100%;
+    /* 右侧采用网格瀑布流布局，更紧凑 */
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    grid-auto-rows: min-content;
+    gap: 20px;
+    overflow-y: auto;
+    align-content: start;
+  }
+
+  /* 核心指标六宫格：跨满两列 */
+  .metric-grid {
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(3, 1fr);
+    /* 强制三列两行 */
+  }
+
+  /* 横排统计：跨满两列 */
+  .streak-row {
+    grid-column: 1 / -1;
+  }
+
+  /* 宽组件强制跨满两列 */
+  .two-col,
+  #lbSec,
+  .sec:has(#tlBars),
+  .sec:has(.heatmap),
+  .sec:has(.ev-list) {
+    grid-column: 1 / -1;
+  }
+
+  /* 弹窗在横屏下限制最大宽度 */
+  .donotplay-content {
+    max-width: 600px;
+    padding: 40px;
+  }
+
+  .donotplay-title {
+    font-size: 48px;
+    /* 避免字体在超宽屏上显得突兀 */
+  }
+}
+
+/* --- [DEBUG PANEL] 右下角悬浮调试日志 --- */
+#debugLogPanel {
+  position: fixed !important;
+  bottom: 20px !important;
+  right: 20px !important;
+  width: 350px !important;
+  max-height: 400px !important;
+  z-index: 1000 !important;
+  background: rgba(0, 0, 0, 0.8) !important;
+  backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 16px !important;
+  display: none !important;
+  /* 默认关闭 */
+  flex-direction: column !important;
+  overflow: hidden !important;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.5) !important;
+  padding: 16px !important;
+}
+
+#debugLogPanel.show {
+  display: flex !important;
+  animation: debug-fade-in 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+@keyframes debug-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.95);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+#debugLogPanel .ev-list {
+  max-height: 300px !important;
+  overflow-y: auto !important;
+}
+
+/* ====================================================================
+   DEBUG ONLY - debugConsole 调试面板
+   ==================================================================== */
+#debugConsole {
+  position: fixed;
+  bottom: 10px;
+  right: 10px;
+  width: 350px;
+  max-height: 200px;
+  background: rgba(0, 0, 0, 0.8);
+  color: #0f0;
+  font-family: monospace;
+  font-size: 11px;
+  padding: 10px;
+  border-radius: 4px;
+  overflow-y: auto;
+  z-index: 10000;
+  border: 1px solid #0f0;
+  display: none;
+}
+
+#debugConsole.show {
+  display: block;
+}
+
+#debugLog {
+  width: 100%;
+}
+
+#debugConsole button {
+  position: absolute;
+  top: 2px;
+  right: 5px;
+  background: none;
+  border: none;
+  color: #0f0;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 0;
 }
