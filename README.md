@@ -1,5 +1,3 @@
-## Releases
-
 <div align="center">
 
 [![QQ 群 672723869](https://img.shields.io/badge/QQ_群-672723869-4A90E2?style=for-the-badge&logo=tencentqq&logoColor=white)](https://qm.qq.com/q/KsXFPJskGQ) [![Releases-下载](https://img.shields.io/badge/Releases-下载-4A90E2?style=for-the-badge&logo=github&logoColor=white)](https://github.com/DOOZH/DoNotPlay/releases/download/%E6%AD%A3%E5%BC%8F%E7%89%88/DoNotPlay_v1.0._Windows.zip) [![Telegram-加入频道](https://img.shields.io/badge/Telegram-加入频道-4A90E2?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/+x_h5I3Ns0a8xOWI1)
