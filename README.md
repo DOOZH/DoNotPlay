@@ -1,10 +1,14 @@
 <div align="center">
 
-[![QQ Group](https://img.shields.io/badge/QQ-672723869-12B7F5?style=for-the-badge&logo=tencentqq&logoColor=white)](https://qm.qq.com/q/KsXFPJskGQ)
-
-[![Download](https://img.shields.io/badge/Download-DoNotPlay_v1.0._Windows.zip-green?style=for-the-badge&logo=github)](https://github.com/DOOZH/DoNotPlay/releases/download/%E6%AD%A3%E5%BC%8F%E7%89%88/DoNotPlay_v1.0._Windows.zip)
-
-[![Telegram](https://img.shields.io/badge/Telegram-Join_Channel-blue?style=for-the-badge&logo=telegram)](https://t.me/+x_h5I3Ns0a8xOWI1)
+<a href="https://qm.qq.com/q/KsXFPJskGQ">
+  <img src="https://img.shields.io/badge/QQ-672723869-12B7F5?style=for-the-badge&logo=tencentqq&logoColor=white" />
+</a>
+<a href="https://github.com/DOOZH/DoNotPlay/releases/download/%E6%AD%A3%E5%BC%8F%E7%89%88/DoNotPlay_v1.0._Windows.zip">
+  <img src="https://img.shields.io/badge/Download-DoNotPlay_v1.0._Windows.zip-green?style=for-the-badge&logo=github" />
+</a>
+<a href="https://t.me/+x_h5I3Ns0a8xOWI1">
+  <img src="https://img.shields.io/badge/Telegram-Join_Channel-blue?style=for-the-badge&logo=telegram" />
+</a>
 
 </div>
 
