@@ -1,12 +1,11 @@
+## Releases
+
 <div align="center">
 
-[![QQ Group](https://img.shields.io/badge/QQ_群-672723869-4A90E2?style=for-the-badge&logo=tencentqq&logoColor=white)](https://qm.qq.com/q/KsXFPJskGQ)
-
-[![Releases](https://img.shields.io/badge/Releases-下载-4A90E2?style=for-the-badge&logo=github&logoColor=white)](https://github.com/DOOZH/DoNotPlay/releases/download/%E6%AD%A3%E5%BC%8F%E7%89%88/DoNotPlay_v1.0._Windows.zip)
-
-[![Telegram](https://img.shields.io/badge/Telegram-加入频道-4A90E2?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/+x_h5I3Ns0a8xOWI1)
+[![QQ 群 672723869](https://img.shields.io/badge/QQ_群-672723869-4A90E2?style=for-the-badge&logo=tencentqq&logoColor=white)](https://qm.qq.com/q/KsXFPJskGQ) [![Releases-下载](https://img.shields.io/badge/Releases-下载-4A90E2?style=for-the-badge&logo=github&logoColor=white)](https://github.com/DOOZH/DoNotPlay/releases/download/%E6%AD%A3%E5%BC%8F%E7%89%88/DoNotPlay_v1.0._Windows.zip) [![Telegram-加入频道](https://img.shields.io/badge/Telegram-加入频道-4A90E2?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/+x_h5I3Ns0a8xOWI1)
 
 </div>
+
 
 
 这是一款帮你保持专注的桌面小工具。我的初衷是：在工作或者学习时间娱乐事实上既耽误了正事也玩不开心，所以尝试开发了DoNotPlay来帮助我在应该专注的时间实现专注。这样可以省出更多的时间玩！
