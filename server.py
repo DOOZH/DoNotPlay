@@ -33,11 +33,18 @@ def get_resource_path(relative_path):
     return os.path.join(os.path.abspath(os.path.dirname(__file__)), relative_path)
 
 def get_writable_path(relative_path):
-    """获取可写文件路径（多级回退确保 .pyw 不卡死）"""
-    # 候选目录列表
+    """获取可写文件路径 — 优先使用系统固定目录，确保程序更新后数据不丢失"""
+    # 候选目录列表（优先级从高到低）
     candidates = []
-    
-    # 1. exe 同级目录或脚本目录
+
+    # 1. APPDATA 目录（Windows 标准应用数据路径，最稳定）
+    if "APPDATA" in os.environ:
+        candidates.append(os.path.join(os.environ["APPDATA"], "DoNotPlay"))
+
+    # 2. 用户文档目录（备选固定路径）
+    candidates.append(os.path.join(os.path.expanduser("~"), "Documents", "DoNotPlay"))
+
+    # 3. exe 同级目录或脚本目录（仅作最后手段）
     if getattr(sys, 'frozen', False):
         candidates.append(os.path.dirname(sys.executable))
     else:
@@ -51,15 +58,8 @@ def get_writable_path(relative_path):
                     candidates.append(os.getcwd())
             except (IndexError, AttributeError):
                 candidates.append(os.getcwd())
-            
-    # 2. 用户文档目录
-    candidates.append(os.path.join(os.path.expanduser("~"), "Documents", "DoNotPlay"))
-    
-    # 3. APPDATA 目录
-    if "APPDATA" in os.environ:
-        candidates.append(os.path.join(os.environ["APPDATA"], "DoNotPlay"))
-        
-    # 4. 临时目录
+
+    # 4. 临时目录（绝望回退）
     candidates.append(os.path.join(os.environ.get("TEMP", "."), "DoNotPlay"))
 
     for base in candidates:
@@ -79,6 +79,40 @@ def get_writable_path(relative_path):
             
     # 最后绝望的回退：当前工作目录
     return relative_path
+
+
+def _migrate_data_to_appdata():
+    """将程序目录中的旧数据文件迁移到 APPDATA，避免更新程序后丢失配置和历史"""
+    if "APPDATA" not in os.environ:
+        return
+
+    appdata_dir = os.path.join(os.environ["APPDATA"], "DoNotPlay")
+
+    # 确定程序所在目录
+    if getattr(sys, 'frozen', False):
+        prog_dir = os.path.dirname(sys.executable)
+    else:
+        try:
+            prog_dir = os.path.abspath(os.path.dirname(__file__))
+        except (NameError, AttributeError):
+            return
+
+    # 如果程序目录就是 APPDATA 目录，无需迁移
+    if os.path.normcase(os.path.normpath(prog_dir)) == os.path.normcase(os.path.normpath(appdata_dir)):
+        return
+
+    for fname in ("config.json", "data.json"):
+        src = os.path.join(prog_dir, fname)
+        dst = os.path.join(appdata_dir, fname)
+        try:
+            if os.path.exists(src) and not os.path.exists(dst):
+                os.makedirs(appdata_dir, exist_ok=True)
+                import shutil
+                shutil.copy2(src, dst)
+                # 迁移后重命名旧文件，标记已迁移
+                os.rename(src, src + ".migrated")
+        except Exception:
+            pass  # 迁移失败不影响正常运行
 
 # ══════════════════════════════════════════
 #  工业级静默日志与流重定向 (防 PyInstaller 闪退)
@@ -312,9 +346,15 @@ class EventStateMachine:
 
 
 class FatigueMetrics:
-    """综合疲劳指标 (科学评分版 v2 - 更稳定准确)"""
+    """综合疲劳指标 (科学评分版 v3 - 三层平滑稳定版)
+    
+    稳定性设计：
+      第1层 - PERCLOS 长窗口 (~3分钟)，从源头平滑闭眼比例
+      第2层 - 慢速 EMA (α=0.01)，抑制分数中频波动
+      第3层 - 状态滞回 + 确认计时器，防止阈值边缘跳变
+    """
     def __init__(self):
-        self.eye_state_buffer = TimeSeriesBuffer(window_size=300) # ~10s 长窗口，消除瞬时波动
+        self.eye_state_buffer = TimeSeriesBuffer(window_size=5400) # ~3分钟@30fps
         self.blink_timestamps = deque(maxlen=100)
         self.long_blink_count = 0
         self.yawn_count = 0
@@ -325,8 +365,34 @@ class FatigueMetrics:
         self.score = 0
         self.smoothed_score = 0.0
         self.state = 'normal' # normal | mild | moderate | severe
+
+        # 第3层：状态稳定性机制
+        self._candidate_state = 'normal'
+        self._candidate_since = 0.0
+        self._state_hold_time = 30.0  # 候选状态需持续 30 秒才确认切换
     
+    def _determine_state_with_hysteresis(self):
+        """带滞回的状态判定：不同方向使用不同阈值，防止边缘跳变"""
+        score = self.score
+        current = self.state
+        if current == 'normal':
+            if score >= 30: return 'mild'
+            return 'normal'
+        elif current == 'mild':
+            if score >= 50: return 'moderate'
+            if score < 22: return 'normal'     # 要降回 normal 需 < 22（比升级阈值 30 低 8 分）
+            return 'mild'
+        elif current == 'moderate':
+            if score >= 80: return 'severe'
+            if score < 40: return 'mild'        # 要降回 mild 需 < 40（比升级阈值 50 低 10 分）
+            return 'moderate'
+        elif current == 'severe':
+            if score < 65: return 'moderate'    # 要降回 moderate 需 < 65（比升级阈值 80 低 15 分）
+            return 'severe'
+        return current
+
     def update(self, is_eye_closed, is_yawning, current_time, is_long_blink=False):
+        # 第1层：长窗口 PERCLOS
         self.eye_state_buffer.append(1 if is_eye_closed else 0)
         
         # 时间窗口：只统计过去 5 分钟内的事件
@@ -346,21 +412,30 @@ class FatigueMetrics:
         
         self.perclos = self.eye_state_buffer.get_perclos() # 0-100
         
-        # 评分公式 v2: 更宽的 PERCLOS 区间 + 降低惩罚权重
-        # PERCLOS 基准分 (0-60): 20% 开始计分，55% 满分
+        # 评分公式: PERCLOS 基准分 (0-60) + 惩罚项 (0-40)
         p_score = np.clip((self.perclos - 20) / (55 - 20), 0, 1) * 60
-        # 惩罚项 (0-40): 降低单次权重，避免偶尔长眨眼就触发
         penalty = min(40, self.long_blink_count * 3 + self.yawn_count * 8)
         
         raw_score = p_score + penalty
-        # 指数移动平均平滑 (α=0.05)，防止分数跳变
-        self.smoothed_score = self.smoothed_score * 0.95 + raw_score * 0.05
+        # 第2层：慢速 EMA (α=0.01)，半衰期约 2.3 秒，95% 响应约 10 秒
+        self.smoothed_score = self.smoothed_score * 0.99 + raw_score * 0.01
         self.score = int(self.smoothed_score)
         
-        if self.score < 30: self.state = 'normal'
-        elif self.score < 50: self.state = 'mild'
-        elif self.score < 80: self.state = 'moderate'
-        else: self.state = 'severe'
+        # 第3层：带滞回 + 确认计时器
+        new_candidate = self._determine_state_with_hysteresis()
+        
+        if new_candidate != self._candidate_state:
+            # 候选状态改变，重新计时
+            self._candidate_state = new_candidate
+            self._candidate_since = current_time
+        
+        if self._candidate_state != self.state:
+            # 候选状态与当前不同，等待确认时间
+            if current_time - self._candidate_since >= self._state_hold_time:
+                self.state = self._candidate_state
+        else:
+            # 候选与当前一致，保持计时器同步
+            self._candidate_since = current_time
 
 
 class PostureMetrics:
@@ -380,11 +455,37 @@ class PostureMetrics:
         self.cur_slouch_deg = 0.0
         
         self.slouch_machine = EventStateMachine(enter_ms=3000, exit_ms=1000)
+        
+        # 颈部自动校准：用前 N 帧的最大颈长作为"挺直"基准
+        self._neck_baseline = 0.0
+        self._neck_calibration_samples = 0
+        self._NECK_CALIBRATION_FRAMES = 150  # ~5秒@30fps
     
-    def update(self, slouch_angle, neck_ratio, balance_deg):
+    def update(self, slouch_angle, neck_ratio_or_length, balance_deg, *, raw_neck_length=0.0):
         self.slouch_buf.append(slouch_angle)
-        self.neck_buf.append(neck_ratio)
         self.balance_buf.append(balance_deg)
+        
+        # 颈部自动校准逻辑：前 5 秒建立基准
+        if raw_neck_length > 0.01:
+            if self._neck_calibration_samples < self._NECK_CALIBRATION_FRAMES:
+                self._neck_calibration_samples += 1
+                # 用 90 百分位（排除异常高值）逐步更新基准
+                if raw_neck_length > self._neck_baseline * 0.95:
+                    self._neck_baseline = max(self._neck_baseline, raw_neck_length)
+            else:
+                # 校准完成后仍缓慢适应（EMA α=0.002 跟踪头部距离变化）
+                if raw_neck_length > self._neck_baseline:
+                    self._neck_baseline += (raw_neck_length - self._neck_baseline) * 0.002
+            
+            # 计算真实比率
+            if self._neck_baseline > 0.01:
+                neck_ratio = raw_neck_length / self._neck_baseline
+            else:
+                neck_ratio = 1.0
+        else:
+            neck_ratio = neck_ratio_or_length  # 回退到传入的比率
+        
+        self.neck_buf.append(neck_ratio)
         
         avg_slouch = self.slouch_buf.get_value()
         avg_neck_ratio = self.neck_buf.get_value()
@@ -400,8 +501,7 @@ class PostureMetrics:
         elif avg_slouch > 12: self.slouch_state = 'mild'
         else: self.slouch_state = 'good'
         
-        # 2. 颈前伸判定 (基于基准长度的压缩率)
-        # 0.85 代表比基准短了 15% (即头向前伸了)
+        # 2. 颈前伸判定 (基于自动校准基准的压缩率)
         if avg_neck_ratio < 0.75: self.neck_state = 'severe'
         elif avg_neck_ratio < 0.88: self.neck_state = 'mild'
         else: self.neck_state = 'good'
@@ -416,10 +516,10 @@ class PostureMetrics:
 
 
 class HydrationDetector:
-    """饮水检测 (状态机融合版 - 增强灵敏度)"""
+    """饮水检测 (状态机融合版 - 高灵敏度 v2)"""
     def __init__(self):
-        # 【增强】缩短进入时间到 500ms，降低冷却时间到 2500ms 防止过度防抖
-        self.machine = EventStateMachine(enter_ms=500, exit_ms=400, cooldown_ms=2500)
+        # 极短进入延迟，快速确认饮水动作
+        self.machine = EventStateMachine(enter_ms=250, exit_ms=300, cooldown_ms=1500)
         self.last_drink_time = 0
         self.minutes_since = -1
         self.today_drink_count = 0
@@ -441,25 +541,24 @@ class HydrationDetector:
 
 
 class PhoneDetector:
-    """手机使用检测 (证据融合版 - 增强灵敏度)"""
+    """手机使用检测 (证据融合版 v3 - 极速响应)"""
     def __init__(self):
-        # 【增强】缩短进入/退出时间，提高反应速度至 800/400ms
-        self.machine = EventStateMachine(enter_ms=800, exit_ms=400, cooldown_ms=2000)
+        # v3: 极速进入(300ms) + 极速退出(150ms) + 极短冷却(300ms)
+        self.machine = EventStateMachine(enter_ms=300, exit_ms=150, cooldown_ms=300)
         self.state = 'normal'
         self.score = 0
         self.duration_ms = 0
     
     def update(self, current_time, has_phone, phone_near_face, gaze_lock, work_context):
-        # 证据得分计算 (【增强】提高视线锁定权重)
         score = 0
-        if has_phone: score += 40
-        if phone_near_face: score += 30
-        if gaze_lock: score += 40  # 【增强】视线锁定权重从 30 提高到 40
-        if work_context: score -= 20 # 工作上下文抑制
+        if has_phone: score += 45     # 提高: YOLO 看到手机即高分
+        if phone_near_face: score += 35
+        if gaze_lock: score += 40
+        if work_context: score -= 15  # 降低抑制，避免漏检
         
         self.score = int(np.clip(score, 0, 100))
-        # 【增强】降低门槛从 55 到 50，更快检测手机使用
-        is_triggered = self.score >= 50
+        # v3: 降低门槛到 40，仅 has_phone(45) 几乎就能触发
+        is_triggered = self.score >= 40
         
         is_confirmed = self.machine.update(is_triggered, current_time)
         self.state = 'using' if is_confirmed else 'normal'
@@ -1130,11 +1229,14 @@ def draw_skeleton_hud(img, pose_map, w, h):
 #  环境模式和运行信息
 # ═══════════════════════════════════════════════════════════════
 # 运行元信息：模型引擎标签
-APP_VERSION = "1.0"
+APP_VERSION = "1.1"
 ENGINE_LABEL = "YOLO26 + Pose + FaceMesh"
 
 CONFIG_FILE = get_writable_path('config.json')
 DATA_FILE = get_writable_path('data.json')
+
+# 启动时自动迁移旧数据到 APPDATA
+_migrate_data_to_appdata()
 
 # ═══════════════════════════════════════════════════════════════
 #  配置数据结构定义
@@ -2631,28 +2733,28 @@ def vision_loop():
                     else: state.drink_frames = max(0, state.drink_frames - 1)
                     if state.drink_frames >= 12: state.last_drink_time = now
 
-                    # 手机物理消抖：降低至 6 帧 (~0.2s)，更快响应近距离手机
+                    # 手机物理消抖 v3：3 帧 (~0.1s) 极速响应，放下后快速衰减
                     if ph_phys_now: state.phone_frames = min(state.phone_frames + 1, 30)
-                    else: state.phone_frames = max(0, state.phone_frames - 1)
+                    else: state.phone_frames = max(0, state.phone_frames - 3)
                     
-                    # 手机视线消抖：0.4 秒 (12帧)，降低响应时间
+                    # 手机视线消抖 v3：5 帧 (~0.17s)，快速衰减
                     if ph_gaze_now: state.gaze_phone_frames = min(state.gaze_phone_frames + 1, 60)
-                    else: state.gaze_phone_frames = max(0, state.gaze_phone_frames - 1)
+                    else: state.gaze_phone_frames = max(0, state.gaze_phone_frames - 3)
 
-                    # 低头看手机消抖：2 秒 (60帧) — 手机存在+低头
+                    # 低头看手机消抖 v3：20 帧 (~0.67s)，快速衰减
                     if ph_down_now: state.phone_down_frames = min(state.phone_down_frames + 1, 120)
-                    else: state.phone_down_frames = max(0, state.phone_down_frames - 2)
+                    else: state.phone_down_frames = max(0, state.phone_down_frames - 4)
 
-                    # 手臂举起遮挡推断消抖：2.5 秒 (75帧)
+                    # 手臂举起遮挡推断消抖 v3：30 帧 (~1s)，快速衰减
                     if ph_arm_gaze_now: state.phone_arm_gaze_frames = min(state.phone_arm_gaze_frames + 1, 120)
-                    else: state.phone_arm_gaze_frames = max(0, state.phone_arm_gaze_frames - 2)
+                    else: state.phone_arm_gaze_frames = max(0, state.phone_arm_gaze_frames - 4)
 
-                    # 手持手机消抖：仅需 YOLO 识别到手机，15 帧 (~0.5s) 即触发
+                    # 手持手机消抖 v3：6 帧 (~0.2s) 极速触发，放下后快速衰减
                     if has_phone: state.phone_hold_frames = min(state.phone_hold_frames + 1, 40)
-                    else: state.phone_hold_frames = max(0, state.phone_hold_frames - 1)
+                    else: state.phone_hold_frames = max(0, state.phone_hold_frames - 3)
 
-                    # 最终警报：手持(15帧) / 物理近距(6帧) / 视线(12帧) / 低头(60帧) / 遮挡推断(75帧)
-                    state.phone_alert_active = (state.phone_hold_frames >= 15) or (state.phone_frames >= 6) or (state.gaze_phone_frames >= 12) or (state.phone_down_frames >= 60) or (state.phone_arm_gaze_frames >= 75)
+                    # 最终警报 v3：大幅降低所有触发阈值
+                    state.phone_alert_active = (state.phone_hold_frames >= 6) or (state.phone_frames >= 3) or (state.gaze_phone_frames >= 5) or (state.phone_down_frames >= 20) or (state.phone_arm_gaze_frames >= 30)
 
                 # 3. 绘制人脸/视线追踪
                 if face_detected and nose_px:
@@ -2749,17 +2851,17 @@ def vision_loop():
                     is_long_blink=(ear_val < 0.15 and face_detected_smoothed)
                 )
                     
-                # 2. 饮水判定证据
+                # 2. 饮水判定证据 (高灵敏度)
                 cup_near_mouth = False
                 if state.signals.has_cup and nose_px:
                     for det in last_yolo_detections:
                         if det['class'] in ['cup', 'bottle']:
                             bx, by, bw, bh = det['bbox']
                             dist = np.hypot(bx + bw*0.5 - nose_px[0], by + bh*0.5 - nose_px[1])
-                            if dist < face_h_val * h * 1.2:
+                            if dist < face_h_val * h * 1.8:
                                 cup_near_mouth = True; break
                     
-                is_drinking_evidence = state.signals.has_cup and (cup_near_mouth or (mar_val > 0.45 and is_arm_up) or (is_arm_up and adj_pitch < -5))
+                is_drinking_evidence = state.signals.has_cup and (cup_near_mouth or (mar_val > 0.35 and is_arm_up) or (is_arm_up and adj_pitch < -3))
                 state.metrics['hydration'].update(now, is_drinking_evidence)
                     
                 # 3. 手机判定证据
@@ -2781,13 +2883,11 @@ def vision_loop():
                     
                 # 4. 姿态判定 — 仅在有有效姿态数据时更新
                 if face_detected_smoothed or pose_detected_smoothed:
-                    # 修复：未校准时使用当前值作为基准 (ratio=1.0)，避免量纲不匹配导致的误判
-                    if state.baseline.neck_length > 0:
-                        baseline_neck = state.baseline.neck_length
-                    else:
-                        baseline_neck = neck_length_val if neck_length_val > 0.001 else 1.0
-                    neck_ratio = neck_length_val / baseline_neck
-                    state.metrics['posture'].update(slouch_angle, neck_ratio, shoulder_diff_val)
+                    # 传入原始颈长，让 PostureMetrics 内部自动校准
+                    state.metrics['posture'].update(
+                        slouch_angle, 1.0, shoulder_diff_val,
+                        raw_neck_length=neck_length_val
+                    )
                     
                 # 5. 注意力与离开判定 (极简版：直接使用原始信号 face_detected)
                 is_using_phone = state.metrics['phone'].state == 'using'

@@ -31,6 +31,22 @@ function toggleTheme() {
   saveConfigToBackend();
 }
 
+function applyTheme() {
+  const root = document.documentElement;
+  const btn = document.getElementById('themeBtn');
+  let effective = S.theme || 'auto';
+
+  if (effective === 'auto') {
+    // 跟随系统
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    root.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+    if (btn) btn.textContent = '主题: 自动';
+  } else {
+    root.setAttribute('data-theme', effective);
+    if (btn) btn.textContent = effective === 'dark' ? '主题: 深色' : '主题: 浅色';
+  }
+}
+
 async function refreshApp() {
   // 记录当前的连续专注时间（如果有）
   if (S.inStreak && S.curPhaseStreakMs > 5000) {
@@ -564,7 +580,7 @@ function startCalibration() {
 
       const calStatus = document.getElementById('calibStatus');
       if (calStatus) calStatus.textContent = '已校准';
-      document.getElementById('calibBtn')?.classList.add('active');
+      // 校准完成后不添加 active 样式，保持与其他按钮一致
       playTone(800, 0.2, 'sine', 0.1);
       addEv('校准完成', 'i');
     }
@@ -717,6 +733,9 @@ function updateHeatmap() {
   const container = document.getElementById('heatmap');
   if (!container) return;
   const days = S.days || {};
+  const gInput = document.getElementById('goalInput');
+  const goalMin = gInput ? (parseInt(gInput.value) || 300) : 300;
+  const goalMs = goalMin * 60000;
   let html = '';
 
   // 生成最近 28 天的数据
@@ -727,6 +746,7 @@ function updateHeatmap() {
     const dayData = days[date];
     const focusMs = dayData ? dayData.focusMs : 0;
     const hours = focusMs / 3600000;
+    const goalAchieved = focusMs >= goalMs;
 
     let bg = 'var(--bg3)'; // 默认底色
     if (hours >= 4) bg = 'var(--green)';
@@ -734,7 +754,8 @@ function updateHeatmap() {
     else if (hours > 0.1) bg = 'rgba(129, 201, 149, 0.5)';
 
     const bestStreakMin = dayData && dayData.bestStreak ? Math.round(dayData.bestStreak / 60000) : 0;
-    html += `<div class="hm-cell" style="background:${bg}; border-radius: 4px; border: 1px solid var(--border)" title="${date}: 专注 ${hours.toFixed(1)}h, 最长连续 ${bestStreakMin}m"></div>`;
+    const star = goalAchieved ? '⭐' : '';
+    html += `<div class="hm-cell${goalAchieved ? ' hm-goal' : ''}" style="background:${bg}; border-radius: 4px; border: 1px solid var(--border)" title="${date}: 专注 ${hours.toFixed(1)}h, 最长连续 ${bestStreakMin}m${goalAchieved ? ' ✅达标' : ''}">${star}</div>`;
   }
   container.innerHTML = html;
 }
@@ -798,12 +819,13 @@ function updateTimeline(now) {
       validStatuses = [maxSt];
     }
 
-    S.tlData.shift();
     S.tlData.push({
       validStatuses,
       time: timeStr,
       counts: { ...counts }
     });
+    // 保留最近 30 分钟的数据，超出后才开始滚动
+    if (S.tlData.length > 30) S.tlData.shift();
 
     S.minBucket = []; // 清空缓冲区，开始下一分钟记录
     // 业务数据持久化由定时器 syncDataToBackend() 处理
@@ -1118,16 +1140,20 @@ const MetricInterpreter = {
       const smoothed = MetricInterpreter.avg(S.shoulderHistory);
       const absTilt = Math.abs(smoothed);
 
-      let text = '肩部平衡';
-      let state = 'normal';
+      let text, state = 'normal';
       if (absTilt > 10.0) { text = '严重侧倾'; state = 'danger'; }
-      else if (absTilt > 5.0) { text = '轻度不均'; state = 'warn'; }
+      else if (absTilt > 5.0) { text = '轻微侧倾'; state = 'warn'; }
+      else { text = '端正'; }
 
-      const sign = smoothed > 0 ? '右倾' : (smoothed < 0 ? '左倾' : '');
-      return { text: `${text} (${sign}${absTilt.toFixed(1)}°)`, detail: smoothed, state, available: true, stale: false };
+      // 简短格式：只在有倾斜时附加角度，竖屏友好
+      if (absTilt > 2.0) {
+        const dir = smoothed > 0 ? 'R' : 'L';
+        text += ` ${dir}${absTilt.toFixed(0)}°`;
+      }
+      return { text, detail: smoothed, state, available: true, stale: false };
     } catch (e) {
       console.error('[INTERPRET] Shoulder Error:', e);
-      return { text: '指标故障', detail: '-', state: 'error', available: false, stale: false };
+      return { text: '故障', detail: '-', state: 'error', available: false, stale: false };
     }
   },
 
@@ -1319,7 +1345,7 @@ function tick() {
   // 计算每日目标进度（基于当日累计 focusMs）
   const todayStats = ensureTodayStats();
   const gInput = document.getElementById('goalInput');
-  const goalMin = gInput ? (parseInt(gInput.value) || 120) : 120;
+  const goalMin = gInput ? (parseInt(gInput.value) || 300) : 300;
   const curMin = todayStats.focusMs / 60000;
   const pct = Math.min(Math.round((curMin / goalMin) * 100), 100);
 

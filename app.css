@@ -475,6 +475,7 @@ body * {
   display: flex;
   flex-direction: column;
   flex: 1;
+  min-width: 0;
 }
 
 .md3-stat-lbl {
@@ -973,6 +974,16 @@ body * {
   background: var(--bg3);
   cursor: pointer;
   transition: transform 0.1s, filter 0.1s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  line-height: 1;
+  overflow: hidden;
+}
+
+.hm-cell.hm-goal {
+  box-shadow: 0 0 3px var(--green);
 }
 
 .hm-cell:hover {
@@ -2543,6 +2554,9 @@ body * {
     color: var(--text) !important;
     letter-spacing: -0.02em !important;
     transition: color 0.2s ease !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
   }
 
   /* =====================================
@@ -2670,12 +2684,12 @@ body * {
 
   .md3-stat-card {
     padding: 8px 10px !important;
-    gap: 8px !important;
+    gap: 6px !important;
   }
 
-  .md3-stat-icon { width: 32px !important; height: 32px !important; font-size: 16px !important; }
-  .md3-stat-val { font-size: 14px !important; }
-  .md3-stat-lbl { font-size: 10px !important; }
+  .md3-stat-icon { width: 28px !important; height: 28px !important; font-size: 14px !important; flex-shrink: 0 !important; }
+  .md3-stat-val { font-size: 14px !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; }
+  .md3-stat-lbl { font-size: 10px !important; white-space: nowrap !important; }
 
   .dash {
     overflow-y: auto !important;
@@ -2789,6 +2803,9 @@ body * {
   .md3-stat-val {
     font-size: 18px;
     /* 稍微缩小字号适应更紧凑的卡片 */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   /* --- 右侧看板优化 --- */
