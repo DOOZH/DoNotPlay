@@ -1,7 +1,7 @@
 <div align="center">
 
 [![QQ Group](https://img.shields.io/badge/QQ_群-672723869-4A90E2?style=for-the-badge&logo=tencentqq&logoColor=white)](https://qm.qq.com/q/KsXFPJskGQ)
-[![Download](https://img.shields.io/badge/下载-Windows.zip-4A90E2?style=for-the-badge&logo=github&logoColor=white)](https://github.com/DOOZH/DoNotPlay/releases/download/%E6%AD%A3%E5%BC%8F%E7%89%88/DoNotPlay_v1.0._Windows.zip)
+[![Download](https://img.shields.io/badge/下载Releases-4A90E2?style=for-the-badge&logo=github&logoColor=white)](https://github.com/DOOZH/DoNotPlay/releases/download/%E6%AD%A3%E5%BC%8F%E7%89%88/DoNotPlay_v1.0._Windows.zip)
 [![Telegram](https://img.shields.io/badge/Telegram-加入频道-4A90E2?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/+x_h5I3Ns0a8xOWI1)
 
 </div>
