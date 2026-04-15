@@ -13,7 +13,7 @@
 
 ▸ 怎么安装？
 
-不用安装。下载DoNotPlay_v1.0._Windows.zip并解压，把整个文件夹（DoNotPlay.exe + _internal）放在你喜欢的地方，
+不用安装。下载Releases里面的压缩包并解压，把整个文件夹（DoNotPlay.exe + _internal）放在你喜欢的地方，
 双击 DoNotPlay.exe 就能用了。
 
 注意：DoNotPlay.exe 和 _internal 文件夹必须放在一起，缺一不可。
