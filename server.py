@@ -17,6 +17,7 @@ DoNotPlay 视觉处理后端 (ONNX 版本)
 
 import os
 import sys
+import re
 import logging
 import traceback
 import warnings
@@ -194,6 +195,10 @@ import asyncio
 import websockets
 import json
 import time
+import sqlite3
+import ctypes
+import ctypes.wintypes as _wt
+from datetime import datetime, date
 from flask import Flask, Response, request, jsonify
 from flask_cors import CORS
 import onnxruntime as ort
@@ -436,6 +441,62 @@ class FatigueMetrics:
         else:
             # 候选与当前一致，保持计时器同步
             self._candidate_since = current_time
+
+
+class EyeUsageTracker:
+    """连续用眼时间追踪状态机
+    
+    状态 A: 用户在画面 → 累加连续用眼时间
+    状态 B: 短暂离开(< 5分钟) → 暂停计时，保留连续用眼时间
+    状态 C: 离开 >= 5分钟 → 视为有效休息，清零连续用眼时间
+    """
+    AWAY_RESET_SEC = 300   # 5分钟有效休息
+    SHORT_REST_SEC = 1200  # 20分钟短提示阈值
+    LONG_REST_SEC  = 3600  # 60分钟弹窗阈值
+
+    def __init__(self):
+        self.eye_time_sec  = 0.0
+        self.away_time_sec = 0.0
+        self.is_away       = False
+        self._last_update  = time.time()
+        self._prev_short_tier = 0  # 上次触发短提示时的档位(每20分钟一档)
+
+    def update(self, face_detected: bool):
+        now = time.time()
+        dt  = min(now - self._last_update, 5.0)
+        self._last_update = now
+
+        if face_detected:
+            if self.is_away:
+                if self.away_time_sec >= self.AWAY_RESET_SEC:
+                    # 有效休息：清零连续用眼时间
+                    self.eye_time_sec = 0.0
+                    self._prev_short_tier = 0
+                self.away_time_sec = 0.0
+                self.is_away = False
+            self.eye_time_sec += dt
+        else:
+            self.is_away = True
+            self.away_time_sec += dt
+
+    def pop_short_rest_trigger(self) -> bool:
+        """是否刚刚到达20分钟档位（每20分钟一次，到60分钟后停止，因为长提示会接管）"""
+        if self.eye_time_sec >= self.LONG_REST_SEC:
+            return False
+        tier = int(self.eye_time_sec // self.SHORT_REST_SEC)
+        if tier > 0 and tier != self._prev_short_tier:
+            self._prev_short_tier = tier
+            return True
+        return False
+
+    def to_dict(self) -> dict:
+        return {
+            'eye_time_sec':  int(self.eye_time_sec),
+            'eye_minutes':   int(self.eye_time_sec / 60),
+            'away_time_sec': int(self.away_time_sec),
+            'is_away':       self.is_away,
+            'need_long_rest': self.eye_time_sec >= self.LONG_REST_SEC,
+        }
 
 
 class PostureMetrics:
@@ -1111,32 +1172,41 @@ def draw_tech_box(img, x1, y1, w, h, color, label, score=None):
     img[:] = draw_chinese_text(img, txt, (x1, y1 - 22 if y1 > 25 else y1 + 5), font_size=14, color=(255, 255, 255), bg_color=color)
 
 def draw_runtime_hud(img, face_info, pose_info, object_info, det_count=0):
-    """【新增】在左上角显示固定的三行模型汇总信息"""
-    face_info['det_count'] = det_count
-    panel_w, panel_h = 320, 85
+    """简约 HUD：眼/肩/物 三行，低饱和度配色，减少视觉干扰"""
+    panel_w, panel_h = 175, 68
     overlay = img.copy()
-    cv2.rectangle(overlay, (5, 5), (panel_w, panel_h), (0, 0, 0), -1)
-    cv2.addWeighted(overlay, 0.6, img, 0.4, 0, img)
-    cv2.rectangle(img, (5, 5), (panel_w, panel_h), (100, 100, 100), 1)
+    cv2.rectangle(overlay, (4, 4), (panel_w, panel_h), (0, 0, 0), -1)
+    cv2.addWeighted(overlay, 0.42, img, 0.58, 0, img)
 
-    # Line 1: FACE
-    f_color = (100, 255, 100) if face_info['detected'] else (100, 100, 255)
-    f_txt = f"FACE : {'yes' if face_info['detected'] else 'no face'} | EAR {face_info['ear']:.2f}"
-    img[:] = draw_text_chinese(img, f_txt, (12, 10), 14, f_color)
+    # Line 1: 眼 (eye state based on EAR vs baseline)
+    ear = face_info.get('ear', 0)
+    baseline_ear = getattr(getattr(state, 'baseline', None), 'ear', 0.28)
+    if not face_info['detected']:
+        eye_txt, eye_c = '眼  未检测', (100, 100, 100)
+    elif ear < baseline_ear * 0.63:
+        eye_txt, eye_c = f'眼  疲劳', (130, 155, 195)
+    else:
+        eye_txt, eye_c = '眼  正常', (120, 170, 120)
+    img[:] = draw_text_chinese(img, eye_txt, (10, 8), 13, eye_c)
 
-    # Line 2: POSE
-    p_color = (255, 200, 100) if pose_info['valid'] else (100, 100, 255)
-    # 增强：显示具体的健康百分比和倾斜度
-    neck_pct = state.neck_pct
-    tilt_deg = state.shoulder_tilt
-    p_txt = f"POSE : {'valid' if pose_info['valid'] else 'no pose'} | Neck {neck_pct:.0f}% | tilt {tilt_deg:+.1f}° | slouch {pose_info['slouch']:.0f}°"
-    img[:] = draw_text_chinese(img, p_txt, (12, 35), 14, p_color)
+    # Line 2: 肩 (shoulder tilt)
+    tilt_deg = getattr(state, 'shoulder_tilt', 0)
+    if not pose_info['valid']:
+        pose_txt, pose_c = '肩  未检测', (100, 100, 100)
+    elif abs(tilt_deg) < 3:
+        pose_txt, pose_c = '肩  正常', (120, 170, 120)
+    elif abs(tilt_deg) < 8:
+        pose_txt, pose_c = f'肩  {tilt_deg:+.0f}°', (155, 165, 130)
+    else:
+        pose_txt, pose_c = f'肩  {tilt_deg:+.0f}°  ⚠', (130, 130, 175)
+    img[:] = draw_text_chinese(img, pose_txt, (10, 30), 13, pose_c)
 
-    # Line 3: OBJ
-    # 额外显示检测到的原始数量，帮助判断是否被过滤
-    det_count = face_info.get('det_count', 0)
-    o_txt = f"OBJ  : {object_info if object_info else 'none'} ({det_count} total)"
-    img[:] = draw_text_chinese(img, o_txt, (12, 60), 14, (100, 255, 255))
+    # Line 3: 物 (objects, only if present)
+    if object_info:
+        obj_txt, obj_c = f'物  {object_info}', (170, 145, 100)
+    else:
+        obj_txt, obj_c = '物  无', (90, 90, 90)
+    img[:] = draw_text_chinese(img, obj_txt, (10, 52), 13, obj_c)
 
 def draw_hud_decoration(img, w, h, state):
     """【简约化】移除全屏装饰，仅保留极细的姿态进度参考"""
@@ -1196,8 +1266,8 @@ def draw_skeleton_hud(img, pose_map, w, h):
             # 绘制完美水平参考虚线
             cv2.line(img, (lx - 20, mid_y), (rx + 20, mid_y), (150, 150, 150), 1)
             # 绘制当前肩膀连线
-            tilt_color = (0, 255, 0) if abs(ly - ry) < (h * 0.03) else (0, 165, 255)
-            if abs(ly - ry) > (h * 0.06): tilt_color = (0, 0, 255)
+            tilt_color = (80, 180, 80) if abs(ly - ry) < (h * 0.03) else (80, 120, 175)
+            if abs(ly - ry) > (h * 0.06): tilt_color = (80, 80, 160)
             cv2.line(img, (lx, ly), (rx, ry), tilt_color, 2)
             # 绘制落差指示
             cv2.line(img, (lx, ly), (lx, mid_y), tilt_color, 1)
@@ -1229,7 +1299,16 @@ def draw_skeleton_hud(img, pose_map, w, h):
 #  环境模式和运行信息
 # ═══════════════════════════════════════════════════════════════
 # 运行元信息：模型引擎标签
-APP_VERSION = "1.1"
+APP_VERSION = "2.0"
+# Build time: use exe mtime when frozen (packaged), else current datetime
+if getattr(sys, 'frozen', False):
+    try:
+        import os as _os_bt
+        _BUILD_TIME = datetime.fromtimestamp(_os_bt.path.getmtime(sys.executable)).strftime('%Y-%m-%d %H:%M:%S')
+    except Exception:
+        _BUILD_TIME = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+else:
+    _BUILD_TIME = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 ENGINE_LABEL = "YOLO26 + Pose + FaceMesh"
 
 CONFIG_FILE = get_writable_path('config.json')
@@ -1251,6 +1330,11 @@ DEFAULT_CONFIG = {
     'baseline_pitch': 0.0,
     'baseline_ear': 0.28,
     'baseline_neck_length': 0.0,
+    'baseline_shoulder_tilt': 0.0,
+    
+    # ──── 四角校准专注区间 ────
+    'focus_half_yaw': 0.0,    # 水平半范围 (0=未做四角校准)
+    'focus_half_pitch': 0.0,  # 垂直半范围
     
     # ──── 用户界面设置 ────
     'theme': 'auto',  # 'auto', 'dark', 'light'
@@ -1337,11 +1421,18 @@ current_config = load_config()
 
 # 灵敏度预设 (与前端 SENS_PRESETS 对应) - 已收紧
 SENS_TABLE = [
-    {'yaw': 25, 'pitch': 14, 'delay': 2500},  # 1. 严格 (多屏适配：增加横向容忍度)
-    {'yaw': 40, 'pitch': 22, 'delay': 5000},  # 2. 标准 (yaw 30→40，允许小幅转头看副屏)
-    {'yaw': 60, 'pitch': 35, 'delay': 8000},  # 3. 宽松 (yaw 50→60)
-    {'yaw': 85, 'pitch': 45, 'delay': 11000}, # 4. 极简 (yaw 75→85)
+    {'yaw': 25, 'pitch': 18, 'delay': 2500},  # 0. 严格：极窄视线容差，视线稍偏即触发
+    {'yaw': 40, 'pitch': 25, 'delay': 5000},  # 1. 正常：标准专注判定
+    {'yaw': 65, 'pitch': 35, 'delay': 8000},  # 2. 双屏：允许查看侧方副屏
+    {'yaw': 85, 'pitch': 50, 'delay': 11000}, # 3. 多屏：多屏宽松模式
 ]
+
+# 四角校准后的阈值修正系数 [严格, 正常, 双屏, 多屏]
+# 乘以校准半范围，得到最终有效阈值
+# 正常/双屏/多屏 加 30% 缓冲，防止用户在校准边缘时误判走神
+SENS_MULTIPLIERS = [1.0, 1.3, 1.3, 1.3]
+# 双屏/多屏额外增加的横向角度容忍量(度)
+SENS_BONUS_YAW   = [0,   0,  30,  60]
 
 # 动态参数
 SENS_IDX = current_config['sens_idx']
@@ -1363,6 +1454,17 @@ class SharedState:
         self.is_calibrating = False
         self.calibration_samples = []
         self.is_monitoring_paused = False
+        
+        # 四角校准状态
+        self.calib_corner_step = -1       # -1=空闲, 0-3=正在采集的角落编号
+        self.calib_corner_samples = []    # 当前角落的采样缓冲
+        self.calib_corner_warmup = 0      # 切换角落后的预热帧数（跳过，等待用户转移视线）
+        self.pending_corner_result = None # {step, yaw, pitch} 等待发送给前端的结果
+        self.calib_corner_auto_ready = None  # {step, yaw, pitch} 稳定后自动触发，发送后清空
+        self.focus_half_yaw = current_config.get('focus_half_yaw', 0.0)
+        self.focus_half_pitch = current_config.get('focus_half_pitch', 0.0)
+        self.eff_yaw_threshold = float(SENS_TABLE[current_config.get('sens_idx', 1)]['yaw'])
+        self.eff_pitch_threshold = float(SENS_TABLE[current_config.get('sens_idx', 1)]['pitch'])
         
         self.status = 'init'          # 'active' | 'distracted' | 'phone' | 'away'
         self.yaw = 0.0
@@ -1450,6 +1552,10 @@ class SharedState:
 
         # MJPEG 帧
         self.jpeg_frame = None
+        
+        # 连续用眼追踪
+        self.eye_usage_tracker = EyeUsageTracker()
+        self.eye_usage_short_rest = False  # 一次性标志，发送后清除
 
     def full_reset(self):
         """全面重置所有实时监测状态，用于刷新功能"""
@@ -2514,12 +2620,38 @@ def vision_loop():
                             })
                             logging.info(f"[CALIB] 校准完成: Neck={state.baseline_neck_length:.4f}, Yaw={state.baseline_yaw:.1f}, EAR={state.baseline_ear:.3f}, ShoulderTilt={state.baseline_shoulder_tilt:.1f}")
 
+                # 四角专注区间校准：采集当前角落帧
+                if face_detected:
+                    with state.lock:
+                        if state.calib_corner_step >= 0:
+                            # 预热阶段：跳过前 N 帧，等待用户将视线移至新角落
+                            if state.calib_corner_warmup > 0:
+                                state.calib_corner_warmup -= 1
+                            else:
+                                state.calib_corner_samples.append({'yaw': yaw_val, 'pitch': pitch_val, 'ear': ear_val})
+                                # 自动稳定检测：≥10帧 且标准差 < 4° 时发出就绪通知
+                                samp = state.calib_corner_samples
+                                if len(samp) >= 10 and state.calib_corner_auto_ready is None:
+                                    yaws   = [s['yaw']   for s in samp]
+                                    pitches = [s['pitch'] for s in samp]
+                                    mean_y = sum(yaws) / len(yaws)
+                                    mean_p = sum(pitches) / len(pitches)
+                                    std_y = (sum((v - mean_y)**2 for v in yaws) / len(yaws)) ** 0.5
+                                    std_p = (sum((v - mean_p)**2 for v in pitches) / len(pitches)) ** 0.5
+                                    if std_y < 4.0 and std_p < 4.0:
+                                        state.calib_corner_auto_ready = {
+                                            'step': state.calib_corner_step,
+                                            'yaw':  round(mean_y, 4),
+                                            'pitch': round(mean_p, 4),
+                                        }
+
                 # 疲劳度 PERCLOS 计算与眨眼检测
                 if face_detected:
                     with state.lock:
-                        # 动态判定阈值：通常闭眼时 EAR 会下降到睁眼的 50%-75% 左右
-                        # 我们取 baseline 的 68% 作为判定阈值，且最小不低于 0.16，最大不超过 0.25
-                        dynamic_threshold = min(max(state.baseline_ear * 0.68, 0.16), 0.25)
+                        # 动态判定阈值：基于校准基线的相对比例，正确处理天生眼睛较小的人
+                        # 取 baseline 的 68% 作为闭眼判定阈值（相对于本人校准值），不做绝对值裁剪
+                        # 仅保留极低安全底线(0.08)，防止未校准时(baseline=0)出错
+                        dynamic_threshold = max(state.baseline_ear * 0.68, 0.08)
                         is_closed = ear_val < dynamic_threshold
                         if is_closed and state.eye_open:
                             state.eye_open = False
@@ -2669,21 +2801,30 @@ def vision_loop():
                                 box_label = "DRINKING..."
                                 dr_detected_now = True
                         elif cls_name in PHONE_CLASSES:
-                            color = (0, 0, 255) # 鲜红
-                            # 物理距离判定：扩大到 50% 帧宽，捕捉平视或远距离手持手机
-                            if nose_px and dist_to_nose < (w * 0.50):
-                                ph_phys_now = True
-                            # 视线落入手机区域 (扩大容差至 ±40px)
-                            if (bx - 40) <= gaze_x <= (bx + bw + 40) and (by - 40) <= gaze_y <= (by + bh + 40):
-                                ph_gaze_now = True
-                                draw_text_chinese(display_frame, "GAZE LOCKING...", (int(bx), int(by)-20), 14, color)
-                            # 叠加信号：手机存在 + 低头 (pitch > 8°) → 大概率在看手机
-                            if face_detected and adj_pitch > 8:
-                                ph_down_now = True
-                            box_label = "PHONE [!]" if state.phone_alert_active else "PHONE"
-                            if ph_phys_now:
-                                cv2.line(display_frame, (int(cx), int(cy)), (int(nose_px[0]), int(nose_px[1])), color, 2)
-                            has_phone = True
+                            # 尺寸过滤：手表比手机小得多，要求检测到的物体面积至少占帧面积的 1%
+                            # 手机在视野中通常 > 1%，手表通常 < 0.3%
+                            phone_area_ratio = (bw * bh) / max(w * h, 1)
+                            if phone_area_ratio < 0.01:
+                                # 目标太小，疑似手表或遥控器小物件，不触发手机警报
+                                color = (120, 120, 200)
+                                box_label = "WATCH?"
+                                # has_phone 保持 False，不更新 ph_phys_now/ph_gaze_now
+                            else:
+                                color = (0, 0, 255) # 鲜红
+                                # 物理距离判定：扩大到 50% 帧宽，捕捉平视或远距离手持手机
+                                if nose_px and dist_to_nose < (w * 0.50):
+                                    ph_phys_now = True
+                                # 视线落入手机区域 (扩大容差至 ±40px)
+                                if (bx - 40) <= gaze_x <= (bx + bw + 40) and (by - 40) <= gaze_y <= (by + bh + 40):
+                                    ph_gaze_now = True
+                                    draw_text_chinese(display_frame, "GAZE LOCKING...", (int(bx), int(by)-20), 14, color)
+                                # 叠加信号：手机存在 + 低头 (pitch > 8°) → 大概率在看手机
+                                if face_detected and adj_pitch > 8:
+                                    ph_down_now = True
+                                box_label = "PHONE [!]" if state.phone_alert_active else "PHONE"
+                                if ph_phys_now:
+                                    cv2.line(display_frame, (int(cx), int(cy)), (int(nose_px[0]), int(nose_px[1])), color, 2)
+                                has_phone = True
                         else:
                             color = (0, 255, 255) if cls_name in ['keyboard', 'laptop'] else (0, 255, 0)
                             if cls_name in ['keyboard', 'laptop']: has_keyboard = True
@@ -2899,14 +3040,26 @@ def vision_loop():
                     is_using_phone=is_using_phone,
                     static_count=state.static_frame_count
                 )
+                # 根据四角校准结果动态计算有效阈值（有校准用相对值，无校准用固定值）
+                with state.lock:
+                    _fhy = state.focus_half_yaw
+                    _fhp = state.focus_half_pitch
+                if _fhy > 0:  # 已做四角校准
+                    _eff_yaw_t = _fhy * SENS_MULTIPLIERS[SENS_IDX] + SENS_BONUS_YAW[SENS_IDX]
+                    _eff_pitch_t = _fhp * SENS_MULTIPLIERS[SENS_IDX]
+                else:
+                    _eff_yaw_t = YAW_T
+                    _eff_pitch_t = PITCH_T
                 state.metrics['attention'].update(now, adj_yaw, adj_pitch, (has_keyboard or has_book), 
                                                  is_using_phone, 
                                                  state.metrics['away'].state == 'away',
                                                  face_detected,
-                                                 yaw_threshold=YAW_T,
-                                                 pitch_threshold=PITCH_T)
-
-                # C. 字段同步 (Legacy Sync for WebSocket)
+                                                 yaw_threshold=_eff_yaw_t,
+                                                 pitch_threshold=_eff_pitch_t)
+                # 把有效阈值写回 state，供 payload 使用
+                with state.lock:
+                    state.eff_yaw_threshold = round(_eff_yaw_t, 1)
+                    state.eff_pitch_threshold = round(_eff_pitch_t, 1)
                 state.status = computed_status # 兼容旧逻辑，但 WebSocket payload 会在外层重新根据优先级计算最终 status
                 state.yaw, state.pitch = round(adj_yaw, 1), round(adj_pitch, 1)
                 state.ear, state.mar = round(ear_val * 100, 0), round(mar_val, 4)
@@ -2977,6 +3130,10 @@ def vision_loop():
                         state.hydration_minutes = round((now - state.last_drink_time) / 60.0, 1)
                     else:
                         state.hydration_minutes = -1
+                    # 更新连续用眼追踪
+                    state.eye_usage_tracker.update(face_detected)
+                    if state.eye_usage_tracker.pop_short_rest_trigger():
+                        state.eye_usage_short_rest = True
                 
 
                 # ════════════════════════════════════
@@ -3081,6 +3238,70 @@ async def ws_handler(websocket, path=""):
                             state.is_calibrating = True
                             state.calibration_samples = []
                         logging.info("[WS] 收到校准指令，开始采集样本...")
+                    elif data.get('cmd') == 'start_corner_step':
+                        step = int(data.get('step', 0))
+                        with state.lock:
+                            state.calib_corner_step = step
+                            state.calib_corner_samples = []
+                            state.calib_corner_auto_ready = None
+                            state.calib_corner_warmup = 20  # 跳过前20帧（~0.67s），等待用户转移视线
+                        logging.info(f"[CALIB-CORNER] 开始采集角落 {step} 样本")
+                    elif data.get('cmd') == 'end_corner_step':
+                        with state.lock:
+                            step = state.calib_corner_step
+                            samples = list(state.calib_corner_samples)
+                            state.calib_corner_step = -1
+                            state.calib_corner_samples = []
+                            state.calib_corner_auto_ready = None
+                            state.calib_corner_warmup = 0
+                        if samples:
+                            avg_yaw   = sum(s['yaw']   for s in samples) / len(samples)
+                            avg_pitch = sum(s['pitch'] for s in samples) / len(samples)
+                            avg_ear   = sum(s['ear']   for s in samples) / len(samples)
+                            with state.lock:
+                                state.pending_corner_result = {
+                                    'step': step,
+                                    'yaw': round(avg_yaw, 4),
+                                    'pitch': round(avg_pitch, 4),
+                                }
+                            # 仅在旧校准未更新时，用本步的 EAR 更新 baseline_ear
+                            logging.info(f"[CALIB-CORNER] 角落 {step} 完成: yaw={avg_yaw:.2f}, pitch={avg_pitch:.2f} ({len(samples)}帧)")
+                        else:
+                            logging.warning(f"[CALIB-CORNER] 角落 {step} 无采样数据")
+                    elif data.get('cmd') == 'finalize_corner_calib':
+                        corners = data.get('corners', [])  # [{step, yaw, pitch}, ...]
+                        ear_baseline = data.get('ear_baseline', None)
+                        neck_baseline = data.get('neck_baseline', None)
+                        if len(corners) >= 4:
+                            yaws   = [c['yaw']   for c in corners]
+                            pitches = [c['pitch'] for c in corners]
+                            new_baseline_yaw   = (min(yaws) + max(yaws)) / 2.0
+                            new_baseline_pitch = (min(pitches) + max(pitches)) / 2.0
+                            new_focus_half_yaw   = (max(yaws) - min(yaws)) / 2.0
+                            new_focus_half_pitch = (max(pitches) - min(pitches)) / 2.0
+                            with state.lock:
+                                state.baseline_yaw = new_baseline_yaw
+                                state.baseline_pitch = new_baseline_pitch
+                                state.baseline.yaw = new_baseline_yaw
+                                state.baseline.pitch = new_baseline_pitch
+                                state.focus_half_yaw = new_focus_half_yaw
+                                state.focus_half_pitch = new_focus_half_pitch
+                                if ear_baseline is not None:
+                                    state.baseline_ear = float(ear_baseline)
+                                    state.baseline.ear = float(ear_baseline)
+                            save_config({
+                                'sens_idx': SENS_IDX,
+                                'baseline_yaw':   round(new_baseline_yaw, 4),
+                                'baseline_pitch':  round(new_baseline_pitch, 4),
+                                'baseline_ear':    round(state.baseline_ear, 4),
+                                'baseline_neck_length': round(state.baseline_neck_length, 4),
+                                'baseline_shoulder_tilt': round(state.baseline_shoulder_tilt, 4),
+                                'focus_half_yaw':  round(new_focus_half_yaw, 4),
+                                'focus_half_pitch': round(new_focus_half_pitch, 4),
+                            })
+                            logging.info(f"[CALIB-CORNER] 四角校准完成: 中心=({new_baseline_yaw:.1f}, {new_baseline_pitch:.1f}), 半范围=({new_focus_half_yaw:.1f}, {new_focus_half_pitch:.1f})")
+                        else:
+                            logging.warning(f"[CALIB-CORNER] 四角校准数据不足，仅有 {len(corners)} 个角落")
                     elif data.get('cmd') == 'pause_monitoring':
                         with state.lock:
                             state.is_monitoring_paused = data.get('paused', False)
@@ -3146,11 +3367,34 @@ async def ws_handler(websocket, path=""):
                             payload['status'] = 'phone'
                         elif state.metrics['away'].state == 'away':
                             payload['status'] = 'away'
-                        elif state.metrics['attention'].state != 'focused':
-                            payload['status'] = 'distracted'
                         else:
-                            payload['status'] = 'active'
+                            win_state = _win_activity.to_dict()['state']
+                            if win_state == 'distracted':
+                                payload['status'] = 'distracted'
+                            else:
+                                payload['status'] = 'active'
+                        
+                        # 有效阈值（前端用于可视化偏转比例）
+                        payload['gaze_angle']['yaw_threshold'] = state.eff_yaw_threshold
+                        payload['gaze_angle']['pitch_threshold'] = state.eff_pitch_threshold
+                        
+                        # 四角校准结果（一次性发送后清除）
+                        if state.pending_corner_result is not None:
+                            payload['corner_calib_result'] = state.pending_corner_result
+                            state.pending_corner_result = None
+                        # 自动稳定就绪通知（一次性，发送后清除）
+                        if state.calib_corner_auto_ready is not None:
+                            payload['corner_calib_ready'] = state.calib_corner_auto_ready
+                            state.calib_corner_auto_ready = None
                     
+                    # 注入当前窗口活动状态（不需持锁）
+                    payload['window_activity'] = _win_activity.to_dict()
+                    # 连续用眼数据
+                    payload['eye_usage'] = state.eye_usage_tracker.to_dict()
+                    if state.eye_usage_short_rest:
+                        payload['eye_usage']['short_rest_trigger'] = True
+                        state.eye_usage_short_rest = False
+
                     await websocket.send(json.dumps(payload))
                     if time.time() % 5 < 0.1: 
                         logging.debug(f"[WS-TRACE] 推送数据: {payload['status']}")
@@ -3184,12 +3428,541 @@ def run_ws_server():
         logging.error(traceback.format_exc())
 
 # ══════════════════════════════════════════
+#  窗口活动监控模块
+# ══════════════════════════════════════════
+
+_WIN_EVENT_OUTOFCONTEXT   = 0x0000
+_EVENT_SYSTEM_FOREGROUND  = 0x0003
+_EVENT_OBJECT_NAMECHANGE  = 0x800C
+_OBJID_WINDOW             = 0
+_WM_QUIT                  = 0x0012
+_BROWSER_PROCS = {'chrome.exe', 'msedge.exe', 'firefox.exe', 'brave.exe', 'vivaldi.exe', 'opera.exe'}
+_user32 = ctypes.WinDLL('user32', use_last_error=True) if sys.platform == 'win32' else None
+_WinEventProc = ctypes.WINFUNCTYPE(
+    None, _wt.HANDLE, _wt.DWORD, _wt.HWND,
+    _wt.LONG, _wt.LONG, _wt.DWORD, _wt.DWORD
+) if sys.platform == 'win32' else None
+
+_WIN_DB_PATH = get_writable_path('window_activity.db')
+
+
+class WindowActivityDB:
+    """SQLite 窗口活动记录与关键词规则存储（线程安全）"""
+
+    def __init__(self, path=_WIN_DB_PATH):
+        self._path = path
+        self._local = threading.local()
+        self._init_schema()
+
+    def _conn(self):
+        if not hasattr(self._local, 'conn') or self._local.conn is None:
+            self._local.conn = sqlite3.connect(self._path, check_same_thread=False)
+            self._local.conn.row_factory = sqlite3.Row
+        return self._local.conn
+
+    def _init_schema(self):
+        with sqlite3.connect(self._path) as c:
+            c.executescript("""
+                CREATE TABLE IF NOT EXISTS activity_records (
+                    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                    proc_name   TEXT    NOT NULL,
+                    title       TEXT    NOT NULL,
+                    start_time  REAL    NOT NULL,
+                    duration    REAL    NOT NULL DEFAULT 0,
+                    state       TEXT    NOT NULL DEFAULT 'unknown',
+                    date_key    TEXT    NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS keywords (
+                    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                    keyword     TEXT    NOT NULL,
+                    list_type   TEXT    NOT NULL CHECK(list_type IN ('white','black')),
+                    proc_pattern TEXT   DEFAULT NULL,
+                    UNIQUE(keyword, list_type)
+                );
+                CREATE INDEX IF NOT EXISTS idx_activity_date
+                    ON activity_records(date_key);
+            """)
+            # Schema migration: add rule_type column if missing
+            try:
+                c.execute("ALTER TABLE keywords ADD COLUMN rule_type TEXT NOT NULL DEFAULT 'title'")
+            except Exception:
+                pass  # column already exists
+            defaults = [
+                ('代码', 'white', None, 'title'), ('code', 'white', None, 'title'),
+                ('文档', 'white', None, 'title'), ('设计', 'white', None, 'title'),
+                ('会议', 'white', None, 'title'), ('学习', 'white', None, 'title'),
+                ('winword', 'white', None, 'proc'), ('excel', 'white', None, 'proc'),
+                ('powerpnt', 'white', None, 'proc'), ('code', 'white', 'Code.exe', 'proc'),
+                ('微信', 'black', 'WeChat.exe', 'proc'), ('游戏', 'black', None, 'title'),
+                ('抖音', 'black', None, 'title'), ('bilibili', 'black', None, 'title'),
+                ('YouTube', 'black', None, 'title'), ('娱乐', 'black', None, 'title'),
+            ]
+            c.executemany(
+                "INSERT OR IGNORE INTO keywords(keyword,list_type,proc_pattern,rule_type) VALUES(?,?,?,?)",
+                defaults
+            )
+            c.commit()
+
+    def insert_record(self, proc_name, title, start_time, duration, state):
+        dk = datetime.fromtimestamp(start_time).strftime('%Y-%m-%d')
+        cur = self._conn().execute(
+            "INSERT INTO activity_records(proc_name,title,start_time,duration,state,date_key)"
+            " VALUES(?,?,?,?,?,?)",
+            (proc_name, title, start_time, duration, state, dk)
+        )
+        self._conn().commit()
+        return cur.lastrowid
+
+    def update_record(self, record_id, duration=None, state=None):
+        if duration is not None:
+            self._conn().execute(
+                "UPDATE activity_records SET duration=? WHERE id=?", (duration, record_id)
+            )
+        if state is not None:
+            self._conn().execute(
+                "UPDATE activity_records SET state=? WHERE id=?", (state, record_id)
+            )
+        self._conn().commit()
+
+    def add_keyword(self, keyword, list_type, proc_pattern=None, rule_type='title'):
+        self._conn().execute(
+            "INSERT OR REPLACE INTO keywords(keyword,list_type,proc_pattern,rule_type) VALUES(?,?,?,?)",
+            (keyword, list_type, proc_pattern, rule_type)
+        )
+        self._conn().commit()
+
+    def get_keywords(self):
+        rows = self._conn().execute("SELECT keyword, list_type, rule_type FROM keywords").fetchall()
+        return {
+            'white': [{'keyword': r['keyword'], 'rule_type': r['rule_type'] or 'title'} for r in rows if r['list_type'] == 'white'],
+            'black': [{'keyword': r['keyword'], 'rule_type': r['rule_type'] or 'title'} for r in rows if r['list_type'] == 'black'],
+        }
+
+    def get_keywords_full(self):
+        rows = self._conn().execute(
+            "SELECT id, keyword, list_type, proc_pattern, rule_type FROM keywords ORDER BY list_type, rule_type, keyword"
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+    def remove_keyword_by_id(self, kw_id):
+        self._conn().execute("DELETE FROM keywords WHERE id=?", (kw_id,))
+        self._conn().commit()
+
+    def get_today_top10(self):
+        """今日使用前10，非浏览器按进程合并，浏览器按标题合并"""
+        from datetime import datetime as _dt
+        dk = date.today().isoformat()
+        rows = self._conn().execute("""
+            SELECT proc_name, title, duration, state
+              FROM activity_records
+             WHERE date_key = ?
+        """, (dk,)).fetchall()
+        agg = {}
+        for row in rows:
+            proc = row['proc_name']
+            title = row['title'] or ''
+            is_browser = proc.lower() in {b.lower() for b in _BROWSER_PROCS}
+            if is_browser:
+                key = title.strip()
+            else:
+                key = re.sub(r'\.exe$', '', proc, flags=re.IGNORECASE).strip()
+            if not key:
+                continue
+            if key not in agg:
+                agg[key] = {'total': 0, 'focus': 0, 'distracted': 0, 'unknown': 0, 'is_browser': is_browser}
+            agg[key]['total'] += row['duration']
+            st = row['state'] if row['state'] in ('focus', 'distracted', 'unknown') else 'unknown'
+            agg[key][st] = agg[key].get(st, 0) + row['duration']
+        sorted_items = sorted(agg.items(), key=lambda x: x[1]['total'], reverse=True)[:10]
+        return [{'name': k, **v} for k, v in sorted_items]
+
+    def get_heatmap_data(self, days=35):
+        """返回最近N天每天上午/下午/晚上的专注秒数"""
+        from datetime import date as _date, timedelta as _td, datetime as _dt
+        since = (_date.today() - _td(days=days)).isoformat()
+        rows = self._conn().execute("""
+            SELECT start_time, duration, state FROM activity_records
+            WHERE date_key >= ? AND state = 'focus'
+        """, (since,)).fetchall()
+        result = {}
+        for row in rows:
+            try:
+                start = _dt.fromtimestamp(row['start_time'])
+                dk = start.strftime('%Y-%m-%d')
+                hour = start.hour
+                if hour < 12:
+                    slot = 'morning'
+                elif hour < 18:
+                    slot = 'afternoon'
+                else:
+                    slot = 'evening'
+                if dk not in result:
+                    result[dk] = {'morning': 0.0, 'afternoon': 0.0, 'evening': 0.0}
+                result[dk][slot] += row['duration']
+            except Exception:
+                pass
+        return result
+
+    def get_today_log(self, limit=200):
+        dk = date.today().isoformat()
+        rows = self._conn().execute("""
+            SELECT id, proc_name, title, start_time, duration, state
+              FROM activity_records
+             WHERE date_key = ?
+             ORDER BY start_time DESC
+             LIMIT ?
+        """, (dk, limit)).fetchall()
+        return [dict(r) for r in rows]
+
+    def get_today_summary(self):
+        dk = date.today().isoformat()
+        rows = self._conn().execute("""
+            SELECT proc_name, title,
+                   SUM(duration) AS total_sec,
+                   state,
+                   COUNT(*) AS visits
+              FROM activity_records
+             WHERE date_key = ?
+             GROUP BY proc_name, title, state
+             ORDER BY total_sec DESC
+             LIMIT 100
+        """, (dk,)).fetchall()
+        return [dict(r) for r in rows]
+
+    def get_unknown_records(self, limit=20):
+        rows = self._conn().execute("""
+            SELECT id, proc_name, title,
+                   SUM(duration) AS total_sec,
+                   MAX(start_time) AS last_seen
+              FROM activity_records
+             WHERE state = 'unknown'
+             GROUP BY proc_name, title
+             ORDER BY last_seen DESC
+             LIMIT ?
+        """, (limit,)).fetchall()
+        return [dict(r) for r in rows]
+
+    def get_record_by_id(self, record_id):
+        row = self._conn().execute(
+            "SELECT proc_name, title FROM activity_records WHERE id=?", (record_id,)
+        ).fetchone()
+        return dict(row) if row else None
+
+
+class WindowStateClassifier:
+    """根据白/黑名单和超时阈值判定窗口状态"""
+
+    DISTRACTION_TIMEOUT = 120  # 停留超过 2 分钟且未匹配规则视为走神
+
+    def __init__(self, db: WindowActivityDB):
+        self._db = db
+
+    def classify(self, proc_name, title, stay_seconds=0):
+        """返回 'focus' | 'distracted' | 'unknown'"""
+        kw = self._db.get_keywords()
+        proc_lower = proc_name.lower()
+        title_lower = title.lower()
+        combined = f"{proc_lower} {title_lower}"
+        is_browser = proc_lower in {b.lower() for b in _BROWSER_PROCS}
+        for item in kw['white']:
+            w = item['keyword'].lower()
+            if item['rule_type'] == 'proc':
+                if w in proc_lower:
+                    return 'focus'
+            else:  # title rule
+                pp = (item.get('proc_pattern') or '').lower()
+                if pp == '__browser__' and not is_browser:
+                    continue
+                if w in combined:
+                    return 'focus'
+        for item in kw['black']:
+            b = item['keyword'].lower()
+            if item['rule_type'] == 'proc':
+                if b in proc_lower:
+                    return 'distracted'
+            else:
+                pp = (item.get('proc_pattern') or '').lower()
+                if pp == '__browser__' and not is_browser:
+                    continue
+                if b in combined:
+                    return 'distracted'
+        if stay_seconds >= self.DISTRACTION_TIMEOUT:
+            return 'distracted'
+        return 'unknown'
+
+
+class WinActivityState:
+    """当前窗口活动共享状态（线程安全）"""
+
+    def __init__(self):
+        self.lock = threading.Lock()
+        self.proc = ''
+        self.title = ''
+        self.state = 'unknown'
+        self.start_time = time.time()
+        self.current_record_id = None
+        self._recent = deque(maxlen=4)  # last 4 distinct windows
+
+    def to_dict(self):
+        with self.lock:
+            stay = int(time.time() - self.start_time) if self.title else 0
+            recent = list(self._recent)
+            return {
+                'proc': self.proc,
+                'title': self.title,
+                'state': self.state,
+                'stay_sec': stay,
+                'recent_windows': recent,
+            }
+
+
+class WinEventMonitor(threading.Thread):
+    """使用 SetWinEventHook 监听前台窗口切换，事件驱动（零轮询）"""
+
+    def __init__(self, on_window_change):
+        super().__init__(daemon=True, name='WinEventMonitor')
+        self._callback = on_window_change
+        self._hook = None
+        self._hook2 = None
+        self._proc_ref = None
+        self._proc_ref2 = None
+        self._thread_id = None
+        self._last_browser_change = 0.0
+
+    def _clean_title(self, raw):
+        title = re.sub(r'[\s\-–—·|,]*和另外\s*\d+\s*个页面.*$', '', raw.strip()).strip()
+        title = re.sub(r'[\s\-–—·|,]*and\s+\d+\s+more\s+(?:tab|page)s?.*$', '', title, flags=re.IGNORECASE).strip()
+        return title
+
+    def run(self):
+        if sys.platform != 'win32' or _user32 is None:
+            logging.warning("[WinMonitor] 非 Windows 平台，窗口监控已禁用")
+            return
+        self._thread_id = ctypes.windll.kernel32.GetCurrentThreadId()
+
+        def _get_proc_and_title(hwnd):
+            pid = _wt.DWORD()
+            _user32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
+            try:
+                import psutil
+                proc_name = psutil.Process(pid.value).name()
+            except Exception:
+                proc_name = f'PID:{pid.value}'
+            buf = ctypes.create_unicode_buffer(512)
+            _user32.GetWindowTextW(hwnd, buf, 512)
+            title = self._clean_title(buf.value)
+            return proc_name, title
+
+        def _cb(hWinEventHook, event, hwnd, idObject, idChild, dwEventThread, dwmsEventTime):
+            try:
+                if not hwnd:
+                    return
+                proc_name, title = _get_proc_and_title(hwnd)
+                if title:
+                    self._callback(proc_name, title)
+            except Exception:
+                pass
+
+        def _name_cb(hWinEventHook, event, hwnd, idObject, idChild, dwEventThread, dwmsEventTime):
+            """Track browser tab changes via window title changes"""
+            try:
+                if not hwnd or idObject != _OBJID_WINDOW:
+                    return
+                proc_name, title = _get_proc_and_title(hwnd)
+                if not title or proc_name.lower() not in _BROWSER_PROCS:
+                    return
+                now = time.time()
+                if now - self._last_browser_change < 2.0:
+                    return
+                # Only fire if title actually changed for current window
+                with _win_activity.lock:
+                    if _win_activity.proc.lower() != proc_name.lower():
+                        return
+                    if _win_activity.title == title:
+                        return
+                self._last_browser_change = now
+                self._callback(proc_name, title)
+            except Exception:
+                pass
+
+        self._proc_ref  = _WinEventProc(_cb)
+        self._proc_ref2 = _WinEventProc(_name_cb)
+        self._hook = _user32.SetWinEventHook(
+            _EVENT_SYSTEM_FOREGROUND, _EVENT_SYSTEM_FOREGROUND,
+            None, self._proc_ref, 0, 0, _WIN_EVENT_OUTOFCONTEXT
+        )
+        self._hook2 = _user32.SetWinEventHook(
+            _EVENT_OBJECT_NAMECHANGE, _EVENT_OBJECT_NAMECHANGE,
+            None, self._proc_ref2, 0, 0, _WIN_EVENT_OUTOFCONTEXT
+        )
+        if not self._hook:
+            logging.error("[WinMonitor] SetWinEventHook 失败，窗口监控不可用")
+            return
+
+        msg = _wt.MSG()
+        while _user32.GetMessageW(ctypes.byref(msg), None, 0, 0) != 0:
+            _user32.TranslateMessage(ctypes.byref(msg))
+            _user32.DispatchMessageW(ctypes.byref(msg))
+
+        if self._hook:
+            _user32.UnhookWinEvent(self._hook)
+        if self._hook2:
+            _user32.UnhookWinEvent(self._hook2)
+
+    def stop(self):
+        if self._thread_id:
+            ctypes.windll.user32.PostThreadMessageW(self._thread_id, _WM_QUIT, 0, 0)
+
+
+# 全局窗口监控实例
+_win_db = None
+_win_clf = None
+_win_activity = WinActivityState()
+_win_monitor_thread = None
+
+
+def _init_win_monitor():
+    """初始化窗口监控模块，在 main() 中调用"""
+    global _win_db, _win_clf, _win_monitor_thread
+
+    try:
+        _win_db = WindowActivityDB()
+        _win_clf = WindowStateClassifier(_win_db)
+
+        def on_window_change(proc_name, title):
+            now = time.time()
+            with _win_activity.lock:
+                # 结束上一个窗口记录
+                if _win_activity.title:
+                    duration = now - _win_activity.start_time
+                    if _win_activity.current_record_id is None:
+                        _win_activity.current_record_id = _win_db.insert_record(
+                            _win_activity.proc, _win_activity.title,
+                            _win_activity.start_time, duration, _win_activity.state
+                        )
+                    else:
+                        _win_db.update_record(_win_activity.current_record_id, duration=duration)
+
+                # 开始新窗口
+                _win_activity.proc = proc_name
+                _win_activity.title = title
+                _win_activity.start_time = now
+                _win_activity.current_record_id = None
+                _win_activity.state = _win_clf.classify(proc_name, title, stay_seconds=0)
+                # Track recent windows for multi-monitor display
+                key = (proc_name.lower(), title[:40].lower())
+                if not _win_activity._recent or (_win_activity._recent[-1]['proc'] != proc_name or _win_activity._recent[-1]['title'] != title):
+                    _win_activity._recent.append({
+                        'proc': proc_name,
+                        'title': title[:45],
+                        'state': _win_activity.state,
+                        'ts': now,
+                    })
+        def _timeout_checker():
+            while True:
+                time.sleep(5)
+                try:
+                    with _win_activity.lock:
+                        if not _win_activity.title:
+                            continue
+                        stay = time.time() - _win_activity.start_time
+                        new_state = _win_clf.classify(
+                            _win_activity.proc, _win_activity.title, stay_seconds=stay
+                        )
+                        _win_activity.state = new_state
+                        # 持续更新当前记录 duration
+                        if _win_activity.current_record_id is None:
+                            _win_activity.current_record_id = _win_db.insert_record(
+                                _win_activity.proc, _win_activity.title,
+                                _win_activity.start_time, stay, _win_activity.state
+                            )
+                        else:
+                            _win_db.update_record(
+                                _win_activity.current_record_id,
+                                duration=stay,
+                                state=_win_activity.state
+                            )
+                except Exception:
+                    pass
+
+        _win_monitor_thread = WinEventMonitor(on_window_change)
+        _win_monitor_thread.start()
+
+        checker = threading.Thread(target=_timeout_checker, daemon=True, name='WinTimeoutChecker')
+        checker.start()
+
+        # Record all currently visible windows on all monitors at startup
+        def _seed_visible_windows():
+            time.sleep(1.0)  # let the hook settle first
+            try:
+                if not _user32:
+                    return
+                import psutil
+                seen = set()
+
+                def _enum_cb(hwnd, _):
+                    try:
+                        if not _user32.IsWindowVisible(hwnd):
+                            return True
+                        if _user32.IsIconic(hwnd):
+                            return True
+                        buf = ctypes.create_unicode_buffer(512)
+                        _user32.GetWindowTextW(hwnd, buf, 512)
+                        raw = buf.value.strip()
+                        title = re.sub(r'\s+和另外\s*\d+\s*个页面.*$', '', raw).strip()
+                        title = re.sub(r'\s+and\s+\d+\s+more\s+(?:tab|page)s?.*$', '', title, flags=re.IGNORECASE).strip()
+                        if not title:
+                            return True
+                        pid = _wt.DWORD()
+                        _user32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
+                        try:
+                            proc_name = psutil.Process(pid.value).name()
+                        except Exception:
+                            return True
+                        key = (proc_name.lower(), title[:40])
+                        if key in seen:
+                            return True
+                        seen.add(key)
+                        # Insert as zero-duration seed record (don't change _win_activity)
+                        now = time.time()
+                        dk = __import__('datetime').date.today().isoformat()
+                        state_val = _win_clf.classify(proc_name, title, stay_seconds=0)
+                        conn = _win_db._conn()
+                        conn.execute(
+                            "INSERT OR IGNORE INTO activity_records"
+                            "(proc_name,title,start_time,duration,state,date_key)"
+                            " VALUES(?,?,?,0,?,?)",
+                            (proc_name, title, now, state_val, dk)
+                        )
+                        conn.commit()
+                    except Exception:
+                        pass
+                    return True
+
+                _WNDENUMPROC = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_void_p)
+                _user32.EnumWindows(_WNDENUMPROC(_enum_cb), None)
+            except Exception:
+                pass
+
+        threading.Thread(target=_seed_visible_windows, daemon=True, name='WinSeedThread').start()
+
+        logging.info("[WinMonitor] 窗口活动监控已启动")
+    except Exception:
+        logging.error("[WinMonitor] 初始化失败:")
+        logging.error(traceback.format_exc())
+
+
+# ══════════════════════════════════════════
 #  MJPEG 视频流服务器 (Flask)
 # ══════════════════════════════════════════
 # 配置 Flask 获取静态资源（app.html, app.js, app.css）
 _static_dir = get_resource_path('.')
 flask_app = Flask(__name__, static_folder=_static_dir, static_url_path='')
 CORS(flask_app)
+
+@flask_app.route('/api/version', methods=['GET'])
+def api_version():
+    return jsonify({'version': APP_VERSION, 'build_time': _BUILD_TIME})
 
 @flask_app.route('/')
 def index():
@@ -3246,6 +4019,8 @@ def api_get_config():
             'baseline_pitch': cfg.get('baseline_pitch', 0.0),
             'baseline_ear': cfg.get('baseline_ear', 0.28),
             'baseline_neck_length': cfg.get('baseline_neck_length', 0.0),
+            'focus_half_yaw': cfg.get('focus_half_yaw', 0.0),
+            'focus_half_pitch': cfg.get('focus_half_pitch', 0.0),
             'camera_rotation': cfg.get('camera_rotation', 0),
             'camera_flip': cfg.get('camera_flip', True),
             # 运行时元信息
@@ -3311,6 +4086,173 @@ def api_save_data():
         logging.error(f"[API] 保存数据失败: {e}")
         return json.dumps({'error': str(e)}), 500, {'Content-Type': 'application/json; charset=utf-8'}
 
+
+# ── 窗口监控 REST 接口 ──
+
+@flask_app.route('/api/window/keywords', methods=['GET'])
+def api_window_keywords_get():
+    """获取所有关键词规则"""
+    if _win_db is None:
+        return json.dumps([]), 200, {'Content-Type': 'application/json; charset=utf-8'}
+    try:
+        rows = _win_db.get_keywords_full()
+        return json.dumps(rows, ensure_ascii=False), 200, {
+            'Content-Type': 'application/json; charset=utf-8'
+        }
+    except Exception as e:
+        return json.dumps({'error': str(e)}), 500, {'Content-Type': 'application/json; charset=utf-8'}
+
+
+@flask_app.route('/api/window/keywords', methods=['POST'])
+def api_window_keywords_add():
+    """新增关键词规则"""
+    if _win_db is None:
+        return json.dumps({'error': 'monitor not available'}), 503, {
+            'Content-Type': 'application/json; charset=utf-8'
+        }
+    try:
+        body = request.get_json() or {}
+        keyword = (body.get('keyword') or '').strip()
+        list_type = body.get('list_type', '')
+        rule_type = body.get('rule_type', 'title')
+        if not keyword or list_type not in ('white', 'black') or rule_type not in ('proc', 'title'):
+            return json.dumps({'error': 'invalid params'}), 400, {
+                'Content-Type': 'application/json; charset=utf-8'
+            }
+        # Page/title rules are browser-only by default
+        proc_pat = '__browser__' if rule_type == 'title' else body.get('proc_pattern')
+        _win_db.add_keyword(keyword, list_type, proc_pat, rule_type)
+        return json.dumps({'success': True}), 200, {'Content-Type': 'application/json; charset=utf-8'}
+    except Exception as e:
+        return json.dumps({'error': str(e)}), 500, {'Content-Type': 'application/json; charset=utf-8'}
+
+
+@flask_app.route('/api/window/keywords/<int:kw_id>', methods=['DELETE'])
+def api_window_keywords_delete(kw_id):
+    """删除关键词规则"""
+    if _win_db is None:
+        return json.dumps({'error': 'monitor not available'}), 503, {
+            'Content-Type': 'application/json; charset=utf-8'
+        }
+    try:
+        _win_db.remove_keyword_by_id(kw_id)
+        return json.dumps({'success': True}), 200, {'Content-Type': 'application/json; charset=utf-8'}
+    except Exception as e:
+        return json.dumps({'error': str(e)}), 500, {'Content-Type': 'application/json; charset=utf-8'}
+
+
+@flask_app.route('/api/window/top10', methods=['GET'])
+def api_window_top10():
+    """今日使用时间前10"""
+    if _win_db is None:
+        return json.dumps([]), 200, {'Content-Type': 'application/json; charset=utf-8'}
+    try:
+        rows = _win_db.get_today_top10()
+        return json.dumps(rows, ensure_ascii=False), 200, {
+            'Content-Type': 'application/json; charset=utf-8'
+        }
+    except Exception as e:
+        return json.dumps({'error': str(e)}), 500, {'Content-Type': 'application/json; charset=utf-8'}
+
+
+@flask_app.route('/api/window/heatmap', methods=['GET'])
+def api_window_heatmap():
+    """热力图专注数据（按天+时段）"""
+    if _win_db is None:
+        return json.dumps({}), 200, {'Content-Type': 'application/json; charset=utf-8'}
+    try:
+        days = int(request.args.get('days', 35))
+        data = _win_db.get_heatmap_data(days)
+        return json.dumps(data, ensure_ascii=False), 200, {
+            'Content-Type': 'application/json; charset=utf-8'
+        }
+    except Exception as e:
+        return json.dumps({'error': str(e)}), 500, {'Content-Type': 'application/json; charset=utf-8'}
+
+
+@flask_app.route('/api/window/log', methods=['GET'])
+def api_window_log():
+    """今日窗口使用记录（按时间倒序）"""
+    if _win_db is None:
+        return json.dumps([]), 200, {'Content-Type': 'application/json; charset=utf-8'}
+    try:
+        rows = _win_db.get_today_log()
+        return json.dumps(rows, ensure_ascii=False), 200, {
+            'Content-Type': 'application/json; charset=utf-8'
+        }
+    except Exception as e:
+        return json.dumps({'error': str(e)}), 500, {'Content-Type': 'application/json; charset=utf-8'}
+
+
+@flask_app.route('/api/window/status', methods=['GET'])
+def api_window_status():
+    """当前前台窗口状态"""
+    return json.dumps(_win_activity.to_dict(), ensure_ascii=False), 200, {
+        'Content-Type': 'application/json; charset=utf-8'
+    }
+
+
+@flask_app.route('/api/window/today', methods=['GET'])
+def api_window_today():
+    """今日活动汇总"""
+    if _win_db is None:
+        return json.dumps([]), 200, {'Content-Type': 'application/json; charset=utf-8'}
+    try:
+        rows = _win_db.get_today_summary()
+        return json.dumps(rows, ensure_ascii=False), 200, {
+            'Content-Type': 'application/json; charset=utf-8'
+        }
+    except Exception as e:
+        return json.dumps({'error': str(e)}), 500, {'Content-Type': 'application/json; charset=utf-8'}
+
+
+@flask_app.route('/api/window/unknown', methods=['GET'])
+def api_window_unknown():
+    """未知状态待分类记录"""
+    if _win_db is None:
+        return json.dumps([]), 200, {'Content-Type': 'application/json; charset=utf-8'}
+    try:
+        rows = _win_db.get_unknown_records()
+        return json.dumps(rows, ensure_ascii=False), 200, {
+            'Content-Type': 'application/json; charset=utf-8'
+        }
+    except Exception as e:
+        return json.dumps({'error': str(e)}), 500, {'Content-Type': 'application/json; charset=utf-8'}
+
+
+@flask_app.route('/api/window/classify', methods=['POST'])
+def api_window_classify():
+    """手动分类一条 unknown 记录，并将关键词加入规则库"""
+    if _win_db is None:
+        return json.dumps({'error': 'monitor not available'}), 503, {
+            'Content-Type': 'application/json; charset=utf-8'
+        }
+    try:
+        body = request.get_json() or {}
+        record_id = int(body.get('id', 0))
+        state = body.get('state', '')
+        if state not in ('focus', 'distracted'):
+            return json.dumps({'error': 'invalid state'}), 400, {
+                'Content-Type': 'application/json; charset=utf-8'
+            }
+        _win_db.update_record(record_id, state=state)
+        row = _win_db.get_record_by_id(record_id)
+        if row:
+            keyword = row['title'][:8].strip()
+            list_type = 'white' if state == 'focus' else 'black'
+            if keyword:
+                _win_db.add_keyword(keyword, list_type, row['proc_name'])
+        # 同步更新当前活动状态
+        with _win_activity.lock:
+            if _win_activity.title and _win_db:
+                stay = time.time() - _win_activity.start_time
+                _win_activity.state = _win_clf.classify(
+                    _win_activity.proc, _win_activity.title, stay_seconds=stay
+                )
+        return json.dumps({'success': True}), 200, {'Content-Type': 'application/json; charset=utf-8'}
+    except Exception as e:
+        return json.dumps({'error': str(e)}), 500, {'Content-Type': 'application/json; charset=utf-8'}
+
 def run_flask():
     """在独立线程中运行 Flask"""
     try:
@@ -3350,6 +4292,9 @@ def main():
         # 启动视觉处理循环（始终在后台线程）
         vision_thread = threading.Thread(target=vision_loop, daemon=True)
         vision_thread.start()
+
+        # 启动窗口活动监控
+        _init_win_monitor()
 
         # 使用 pywebview 原生窗口
         try:

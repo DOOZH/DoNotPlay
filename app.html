@@ -14,20 +14,20 @@
   <div class="hdr">
     <div class="hdr-brand">
       <img src="DoNotPlay.png" width="16" height="16" style="border-radius:50%;">
-      <span id="versionLabel">DoNotPlay v1.1</span>
+      <span id="versionLabel">DoNotPlay v2.0</span>
     </div>
     <div class="hdr-right">
-      <button class="hdr-btn" id="sensBtn" title="专注灵敏度 [S]">灵敏度: 正常</button>
-      <button class="hdr-btn" id="soundBtn" title="切换音频提示 [M]">声音: 关闭</button>
-      <button class="hdr-btn" id="themeBtn" title="切换深色/浅色模式 [T]">主题</button>
-      <button class="hdr-btn" id="rotateBtn" title="旋转摄像头视角 [V]">视角旋转</button>
-      <button class="hdr-btn" id="calibBtn" title="校准中心位置 [C]">校准<span id="calibStatus"
-          style="display:none">初始化</span></button>
-      <button class="hdr-btn" id="refreshBtn" title="刷新页面和后端连接 [R]">刷新</button>
+      <button class="hdr-btn" id="sensBtn" title="专注灵敏度 [S]" data-i18n-title="tt_sens"><span data-i18n="sens_btn">灵敏度: 正常</span></button>
+      <button class="hdr-btn" id="soundBtn" title="切换音频提示 [M]" data-i18n-title="tt_sound"><span data-i18n="sound_off">声音: 关闭</span></button>
+      <button class="hdr-btn" id="themeBtn" title="切换深色/浅色模式 [T]" data-i18n-title="tt_theme"><span data-i18n="theme_auto">主题</span></button>
+      <button class="hdr-btn" id="rotateBtn" title="旋转摄像头视角 [V]" data-i18n-title="tt_rotate"><span data-i18n="rotate">视角旋转</span></button>
+      <button class="hdr-btn" id="refreshBtn" title="刷新页面和后端连接 [R]" data-i18n-title="tt_refresh"><span data-i18n="refresh">刷新</span></button>
+      <button class="hdr-btn" id="langBtn" title="Switch Language"><span id="langBtnTxt">EN</span></button>
+      <button class="hdr-btn" id="aboutBtn" data-i18n="about">关于</button>
       <div class="clock" id="clk">--:--:--</div>
       <div class="pill" id="sPill" style="background:var(--bg3);color:var(--muted);border-color:var(--border)">
         <div class="dot" id="sDot" style="background:var(--muted)"></div>
-        <span id="sTxt">初始化</span>
+        <span id="sTxt" data-i18n="st_init">初始化</span>
       </div>
     </div>
   </div>
@@ -59,57 +59,43 @@
           <div class="brk bl"></div>
           <div class="brk br"></div>
         </div>
-        <!-- Calibration overlay -->
-        <div class="calib-overlay" id="calibOverlay">
-          <div class="calib-ring">
-            <div class="calib-ring-inner"></div>
-          </div>
-          <div class="calib-text">自然地看着屏幕<br>并保持不动</div>
-          <div class="calib-countdown" id="calibCountdown">3</div>
-        </div>
         <!-- Posture indicator -->
-        <div class="posture-indicator" id="postureTag">良好姿势</div>
+        <div class="posture-indicator" id="postureTag" data-i18n="posture_good">良好姿势</div>
         <div class="no-cam" id="noCam">
           <img src="DoNotPlay.png" width="40" height="40" style="border-radius:50%; opacity:0.7;">
-          <h3>需要摄像头</h3>
-          <p>允许摄像头访问以开始跟踪。所有处理都在本地运行。</p>
-          <button class="cam-btn" id="camBtn">启用摄像头</button>
+          <h3 data-i18n="cam_required">需要摄像头</h3>
+          <p data-i18n="cam_desc">允许摄像头访问以开始跟踪。所有处理都在本地运行。</p>
+          <button class="cam-btn" id="camBtn" data-i18n="cam_enable">启用摄像头</button>
           <p id="errMsg" style="color:var(--red-d);font-size:10px;margin-top:4px"></p>
         </div>
       </div>
       <div class="md3-stats">
-        <div class="md3-stat-card" id="cardFatigue" data-metric="fatigue">
-          <div class="md3-stat-icon">👁️</div>
+        <div class="md3-stat-card" id="cardEyeUsage" data-metric="eye_usage">
+          <div class="md3-stat-icon">⏱️</div>
           <div class="md3-stat-info">
-            <div class="md3-stat-lbl">眼部疲劳</div>
-            <div class="md3-stat-val" id="cFatigue">0%</div>
+            <div class="md3-stat-lbl" data-i18n="lbl_eye_usage">连续用眼</div>
+            <div class="md3-stat-val" id="cEyeUsage">0分钟</div>
           </div>
         </div>
-        <div class="md3-stat-card" id="cardGaze" data-metric="gaze">
-          <div class="md3-stat-icon">🎯</div>
-          <div class="md3-stat-info">
-            <div class="md3-stat-lbl">视线状态</div>
-            <div class="md3-stat-val" id="cGazeState">专注屏幕</div>
-          </div>
-        </div>
+
         <div class="md3-stat-card" id="cardNeck" data-metric="neck">
           <div class="md3-stat-icon">🦴</div>
           <div class="md3-stat-info">
-            <div class="md3-stat-lbl">颈部前倾</div>
+            <div class="md3-stat-lbl" data-i18n="lbl_neck">颈部前倾</div>
             <div class="md3-stat-val" id="cNeckStrain">正常</div>
           </div>
         </div>
         <div class="md3-stat-card" id="cardShoulder" data-metric="shoulder">
           <div class="md3-stat-icon">⚖️</div>
           <div class="md3-stat-info">
-            <div class="md3-stat-lbl">肩颈平衡</div>
+            <div class="md3-stat-lbl" data-i18n="lbl_shoulder">肩颈平衡</div>
             <div class="md3-stat-val" id="cShoulderSymmetry">端正</div>
           </div>
         </div>
         <div class="md3-stat-card" id="cardHydration" data-metric="hydration">
           <div class="md3-stat-icon">💧</div>
           <div class="md3-stat-info">
-            <div class="md3-stat-lbl">上次饮水</div>
+            <div class="md3-stat-lbl" data-i18n="lbl_hydration">上次饮水</div>
             <div class="md3-stat-val" id="cHydration">0 分钟前</div>
           </div>
         </div>
@@ -119,45 +105,45 @@
     <div class="dash">
       <!-- Banners -->
       <div class="banner break-banner" id="brkBanner">
-        <div class="banner-txt" id="brkBannerTxt">该休息了！</div>
-        <button class="banner-btn" id="brkDismissBtn">忽略</button>
+        <div class="banner-txt" id="brkBannerTxt" data-i18n="brk_banner">该休息了！</div>
+        <button class="banner-btn" id="brkDismissBtn" data-i18n="dismiss">忽略</button>
       </div>
 
       <div class="banner phone-banner" id="phoneBanner">
-        <div class="banner-txt">⚠️ 警告：正在使用手机！请立刻放下，返回专注状态。</div>
-        <button class="banner-btn" id="phoneDismissBtn">我已放下</button>
+        <div class="banner-txt" data-i18n="phone_banner">⚠️ 警告：正在使用手机！请立刻放下，返回专注状态。</div>
+        <button class="banner-btn" id="phoneDismissBtn" data-i18n="phone_put_down">我已放下</button>
       </div>
 
       <!-- NEW METRIC GRID -->
       <div class="metric-grid">
         <div class="md-card">
           <div class="md-card-icon">⏱️</div>
-          <div class="md-card-lbl">总时长</div>
+          <div class="md-card-lbl" data-i18n="lbl_duration">总时长</div>
           <div class="md-card-val" id="phaseElapsed">00:00:00</div>
         </div>
         <div class="md-card">
           <div class="md-card-icon">🔥</div>
-          <div class="md-card-lbl">当前连续专注</div>
+          <div class="md-card-lbl" data-i18n="lbl_streak">当前连续专注</div>
           <div class="md-card-val" id="curPhaseStreak" style="color:var(--blue)">00:00:00</div>
         </div>
         <div class="md-card">
           <div class="md-card-icon">🎯</div>
-          <div class="md-card-lbl">累计专注</div>
+          <div class="md-card-lbl" data-i18n="lbl_focus">累计专注</div>
           <div class="md-card-val" id="phaseFocus" style="color:var(--green)">00:00:00</div>
         </div>
         <div class="md-card">
           <div class="md-card-icon">📱</div>
-          <div class="md-card-lbl">累计玩手机</div>
+          <div class="md-card-lbl" data-i18n="lbl_phone">累计玩手机</div>
           <div class="md-card-val" id="phasePhone" style="color:var(--purple)">00:00:00</div>
         </div>
         <div class="md-card">
           <div class="md-card-icon">💭</div>
-          <div class="md-card-lbl">累计走神</div>
+          <div class="md-card-lbl" data-i18n="lbl_dist">累计走神</div>
           <div class="md-card-val" id="phaseDist" style="color:var(--amber)">00:00:00</div>
         </div>
         <div class="md-card">
           <div class="md-card-icon">🚶</div>
-          <div class="md-card-lbl">累计离开</div>
+          <div class="md-card-lbl" data-i18n="lbl_away">累计离开</div>
           <div class="md-card-val" id="phaseAway" style="color:var(--red-d)">00:00:00</div>
         </div>
       </div>
@@ -165,32 +151,27 @@
 
 
       <div class="two-col">
-        <!-- Focus Score -->
-        <div class="sec">
-          <div class="sec-title">专注分数</div>
-          <div class="fb-row">
-            <div class="fb-hdr">
-              <span class="fb-lbl">会话平均</span>
-              <span class="fb-pct" id="fScore" style="color:var(--green)">-</span>
-            </div>
-            <div class="fbar">
-              <div class="fbar-fill" id="fFill" style="width:0%;background:var(--green)"></div>
-            </div>
+        <!-- Window Activity Monitor -->
+        <div class="sec" id="winMonitorSec">
+          <div class="sec-title">
+            <span data-i18n="win_current">当前窗口</span>
+            <span id="winStateChip" class="wa-chip wa-unknown" data-i18n="st_unknown">未知</span>
           </div>
-          <div class="fb-row" style="margin-bottom:0">
-            <div class="fb-hdr">
-              <span class="fb-lbl">最近 5 分钟</span>
-              <span class="fb-pct" id="rScore" style="color:var(--amber)">-</span>
-            </div>
-            <div class="fbar">
-              <div class="fbar-fill" id="rFill" style="width:0%;background:var(--amber)"></div>
-            </div>
+          <div class="wa-app-row">
+            <span class="wa-proc-name" id="waProc">—</span>
+            <span class="wa-stay-timer" id="waStay">—</span>
+          </div>
+          <div class="wa-title-text" id="waTitle" data-i18n="win_waiting">等待检测...</div>
+          <div id="waRecentList" class="wa-recent-list"></div>
+          <div class="wa-today-stats">
+            <span class="wa-stat wa-stat-focus"><span data-i18n="win_today_focus">今日专注</span> <span id="waTodayFocus">0m</span></span>
+            <span class="wa-stat wa-stat-dist"><span data-i18n="st_distracted_short">走神</span> <span id="waTodayDist">0m</span></span>
           </div>
         </div>
 
         <!-- Daily Goal -->
         <div class="sec">
-          <div class="sec-title">每日目标</div>
+          <div class="sec-title" data-i18n="goal_daily">每日目标</div>
           <div class="goal-ring-wrap">
             <div class="goal-ring">
               <svg width="60" height="60" viewBox="0 0 60 60">
@@ -205,7 +186,7 @@
               <span id="goalToday" style="color:var(--hint);font-size:9px">今日会话: 0</span>
               <div class="goal-set">
                 <input type="number" id="goalInput" value="300" min="10" max="600">
-                <label>分钟目标</label>
+                <label data-i18n="goal_min_lbl">分钟目标</label>
               </div>
             </div>
           </div>
@@ -213,7 +194,7 @@
 
         <!-- Session Goal -->
         <div class="sec">
-          <div class="sec-title">本次目标</div>
+          <div class="sec-title" data-i18n="goal_session">本次目标</div>
           <div class="goal-ring-wrap">
             <div class="goal-ring">
               <svg width="60" height="60" viewBox="0 0 60 60">
@@ -225,10 +206,10 @@
             </div>
             <div class="goal-info">
               <span id="sessionGoalProgress">0m / 60m 专注</span>
-              <span id="sessionGoalStatus" style="color:var(--hint);font-size:9px">本次目标进度</span>
+              <span id="sessionGoalStatus" style="color:var(--hint);font-size:9px" data-i18n="goal_session_progress">本次目标进度</span>
               <div class="goal-set">
                 <input type="number" id="sessionGoalInput" value="60" min="5" max="600">
-                <label>分钟目标</label>
+                <label data-i18n="goal_min_lbl">分钟目标</label>
               </div>
             </div>
           </div>
@@ -236,7 +217,7 @@
 
         <!-- Take a Break -->
         <div class="sec" id="breakSec">
-          <div class="sec-title">休息一下</div>
+          <div class="sec-title" data-i18n="break_title">休息一下</div>
           <div class="break-layout">
             <div class="goal-ring">
               <svg width="60" height="60" viewBox="0 0 60 60">
@@ -248,16 +229,16 @@
             </div>
 
             <div class="break-mid">
-              <span id="breakStatus">设定时间并休息</span>
+              <span id="breakStatus" data-i18n="break_set">设定时间并休息</span>
               <div class="goal-set">
                 <input type="number" id="breakInput" value="15" min="1" max="60">
-                <label>分钟</label>
+                <label data-i18n="break_min">分钟</label>
               </div>
             </div>
 
             <button class="md3-btn-large" id="breakStartBtn">
               <span class="md3-btn-icon">☕</span>
-              <span class="md3-btn-text">开始</span>
+              <span class="md3-btn-text" data-i18n="start">开始</span>
             </button>
           </div>
         </div>
@@ -268,13 +249,13 @@
 
       <!-- Focus Streaks / Leaderboard -->
       <div class="sec" id="lbSec">
-        <div class="sec-title">排行榜</div>
+        <div class="sec-title" data-i18n="lb_title">排行榜</div>
         <div class="podium-wrap" id="podiumArea">
           <!-- 左侧：当前数据区 -->
           <div class="lb-side left">
             <div class="podium-medal">🔥</div>
             <div class="streak-num" id="curStreak" style="color:var(--blue)">0:00</div>
-            <div class="podium-label">当前连续专注</div>
+            <div class="podium-label" data-i18n="lb_cur_streak">当前连续专注</div>
             <div class="gap-note" id="curGap"></div>
           </div>
 
@@ -283,17 +264,17 @@
             <div class="podium-col p2">
               <div class="podium-medal">🥈</div>
               <div class="podium-bar" id="pod2Bar"><span class="podium-val" id="pod2Val">-</span></div>
-              <div class="podium-label">亚军</div>
+              <div class="podium-label" data-i18n="lb_2nd">亚军</div>
             </div>
             <div class="podium-col p1">
               <div class="podium-medal">🥇</div>
               <div class="podium-bar" id="pod1Bar"><span class="podium-val" id="pod1Val">-</span></div>
-              <div class="podium-label">冠军</div>
+              <div class="podium-label" data-i18n="lb_1st">冠军</div>
             </div>
             <div class="podium-col p3">
               <div class="podium-medal">🥉</div>
               <div class="podium-bar" id="pod3Bar"><span class="podium-val" id="pod3Val">-</span></div>
-              <div class="podium-label">季军</div>
+              <div class="podium-label" data-i18n="lb_3rd">季军</div>
             </div>
           </div>
 
@@ -301,22 +282,22 @@
           <div class="lb-side right">
             <div class="podium-medal">⚡</div>
             <div class="streak-num" id="bestStreak" style="color:var(--amber)">0:00</div>
-            <div class="podium-label">今日最高连续专注</div>
+            <div class="podium-label" data-i18n="lb_best_today">今日最高连续专注</div>
             <div class="gap-note" id="bestGap"></div>
           </div>
         </div>
-        <div style="text-align:center; font-size:10px; color:var(--hint); margin-top:0px;">历史 TOP 3 专注</div>
+        <div style="text-align:center; font-size:10px; color:var(--hint); margin-top:0px;" data-i18n="lb_top3_note">历史 TOP 3 专注</div>
       </div>
 
       <!-- Session Timeline -->
       <div class="sec">
         <div class="sec-title">
-          <span>时间轴</span>
+          <span data-i18n="tl_title">时间轴</span>
           <span class="sec-title-right">
-            <span style="color:#41af6a;font-size:9px">■ 专注</span>
-            <span style="color:#f4b451;font-size:9px">■ 走神</span>
-            <span style="color:#e53935;font-size:9px">■ 手机</span>
-            <span style="color:#90a4ae;font-size:9px">■ 离开</span>
+            <span style="color:#41af6a;font-size:9px">■ <span data-i18n="st_focus">专注</span></span>
+            <span style="color:#f4b451;font-size:9px">■ <span data-i18n="st_distracted_short">走神</span></span>
+            <span style="color:#e53935;font-size:9px">■ <span data-i18n="st_phone_short">手机</span></span>
+            <span style="color:#90a4ae;font-size:9px">■ <span data-i18n="st_away_short">离开</span></span>
           </span>
         </div>
         <div class="tl-bars" id="tlBars"></div>
@@ -324,18 +305,78 @@
 
       <!-- Weekly Heatmap -->
       <div class="sec">
-        <div class="sec-title">热力图</div>
+        <div class="sec-title" data-i18n="heatmap_title">热力图</div>
         <div class="heatmap-wrap">
           <div class="heatmap" id="heatmap"></div>
         </div>
       </div>
 
 
+      <!-- Window Log -->
+      <div class="sec" id="winLogSec">
+        <div class="sec-title" data-i18n="wl_title">窗口日志</div>
+        <div class="wl-subtabs">
+          <button class="wl-stab active" data-panel="wlRecord" data-i18n="wl_usage">使用记录</button>
+          <button class="wl-stab" data-panel="wlRules" data-i18n="wl_rules">规则管理</button>
+        </div>
+        <div id="wlRecord" class="wl-subpanel">
+          <div id="winLogTop10" class="wl-top10"></div>
+          <div id="winLogList" class="wl-list"></div>
+        </div>
+        <div id="wlRules" class="wl-subpanel hidden">
+          <div class="wl-rule-tabs">
+            <button class="wl-rtab active" data-rt="proc" data-i18n="wl_proc_rules">程序名单</button>
+            <button class="wl-rtab" data-rt="title" data-i18n="wl_title_rules">页面名单</button>
+          </div>
+          <div id="wlRuleProc" class="wl-ruleset">
+            <div class="wl-rules-grid">
+              <div class="wl-rules-col">
+                <div class="wl-rules-title" data-i18n="wl_focus_apps">✅ 专注程序</div>
+                <div id="wlProcWhite" class="wl-kw-list"></div>
+                <div class="wl-kw-add">
+                  <input id="wlProcWhiteInput" type="text" data-i18n-ph="wl_ph_proc_white" placeholder="程序名 (如 winword)" />
+                  <button class="wl-kw-btn wl-kw-btn-f" onclick="_addKeyword('white','proc','wlProcWhiteInput')" data-i18n="add">添加</button>
+                </div>
+              </div>
+              <div class="wl-rules-col">
+                <div class="wl-rules-title" data-i18n="wl_dist_apps">🚫 走神程序</div>
+                <div id="wlProcBlack" class="wl-kw-list"></div>
+                <div class="wl-kw-add">
+                  <input id="wlProcBlackInput" type="text" data-i18n-ph="wl_ph_proc_black" placeholder="程序名 (如 game)" />
+                  <button class="wl-kw-btn wl-kw-btn-d" onclick="_addKeyword('black','proc','wlProcBlackInput')" data-i18n="add">添加</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div id="wlRuleTitle" class="wl-ruleset hidden">
+            <div class="wl-browser-note" data-i18n="wl_browser_note">💡 页面名单仅匹配浏览器标题（Chrome / Edge / Firefox 等）</div>
+            <div class="wl-rules-grid">
+              <div class="wl-rules-col">
+                <div class="wl-rules-title" data-i18n="wl_focus_pages">✅ 专注页面</div>
+                <div id="wlTitleWhite" class="wl-kw-list"></div>
+                <div class="wl-kw-add">
+                  <input id="wlTitleWhiteInput" type="text" data-i18n-ph="wl_ph_title_white" placeholder="标题关键词 (如 GitHub)" />
+                  <button class="wl-kw-btn wl-kw-btn-f" onclick="_addKeyword('white','title','wlTitleWhiteInput')" data-i18n="add">添加</button>
+                </div>
+              </div>
+              <div class="wl-rules-col">
+                <div class="wl-rules-title" data-i18n="wl_dist_pages">🚫 走神页面</div>
+                <div id="wlTitleBlack" class="wl-kw-list"></div>
+                <div class="wl-kw-add">
+                  <input id="wlTitleBlackInput" type="text" data-i18n-ph="wl_ph_title_black" placeholder="标题关键词 (如 bilibili)" />
+                  <button class="wl-kw-btn wl-kw-btn-d" onclick="_addKeyword('black','title','wlTitleBlackInput')" data-i18n="add">添加</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Event Log -->
       <div class="sec">
-        <div class="sec-title">事件日志</div>
+        <div class="sec-title" data-i18n="ev_title">事件日志</div>
         <div class="ev-list" id="evList">
-          <div class="ev"><span class="ev-t">-</span><span class="ev-g">等待摄像头...</span></div>
+          <div class="ev"><span class="ev-t">-</span><span class="ev-g" data-i18n="ev_waiting">等待摄像头...</span></div>
         </div>
       </div>
     </div>
@@ -344,9 +385,9 @@
   <div class="toast" id="toast"></div>
 
   <div class="distracted-popup" id="distractedPopup">
-    <div class="dp-label">分心</div>
+    <div class="dp-label" data-i18n="dp_label">分心</div>
     <div class="dp-time" id="dpTime">0:00</div>
-    <div class="dp-sub">离开专注的时间</div>
+    <div class="dp-sub" data-i18n="dp_sub">离开专注的时间</div>
   </div>
 
 
@@ -355,8 +396,8 @@
     <div class="donotplay-content">
       <div class="donotplay-icon">🚫</div>
       <div class="donotplay-title">DoNotPlay！</div>
-      <div class="donotplay-sub">检测到手机使用 — 请立刻放下手机</div>
-      <button class="donotplay-btn" id="doNotPlayDismissBtn">我已放下手机</button>
+      <div class="donotplay-sub" data-i18n="popup_phone_sub">检测到手机使用 — 请立刻放下手机</div>
+      <button class="donotplay-btn" id="doNotPlayDismissBtn" data-i18n="popup_phone_btn">我已放下手机</button>
     </div>
   </div>
 
@@ -364,21 +405,21 @@
   <div class="posture-warning-popup" id="postureWarningPopup">
     <div class="donotplay-content">
       <div class="donotplay-icon">🦴</div>
-      <div class="donotplay-title">请挺直腰背！</div>
-      <div class="donotplay-sub">检测到您持续驼背，请注意保护颈椎</div>
-      <button class="donotplay-btn" id="postureDismissBtn">我已坐直</button>
+      <div class="donotplay-title" data-i18n="popup_posture_title">请挺直腰背！</div>
+      <div class="donotplay-sub" data-i18n="popup_posture_sub">检测到您持续驼背，请注意保护颈椎</div>
+      <button class="donotplay-btn" id="postureDismissBtn" data-i18n="popup_posture_btn">我已坐直</button>
     </div>
   </div>
 
-  <!-- 疲劳警告弹窗 -->
+  <!-- 连续用眼警告弹窗 -->
   <div class="drowsy-warning-popup" id="drowsyWarningPopup">
     <div class="donotplay-content">
-      <div class="donotplay-icon">💤</div>
-      <div class="donotplay-title">您似乎很疲惫！</div>
-      <div class="donotplay-sub">系统检测到您处于疲劳状态，请闭目休息片刻</div>
-      <button class="donotplay-btn" id="drowsyDismissBtn">我已清醒</button>
-      <button class="donotplay-btn" id="drowsyRestBtn" style="margin-top:8px; background:var(--primary); color:#fff;">进入休息</button>
-      <button class="donotplay-btn" id="drowsyDisableBtn" style="margin-top:8px; background:transparent; color:var(--hint); font-size:12px; border:1px solid var(--border);">本次关闭疲惫监测</button>
+      <div class="donotplay-icon">👁️</div>
+      <div class="donotplay-title" data-i18n="popup_eye_title">用眼时间较长</div>
+      <div class="donotplay-sub" data-i18n="popup_eye_sub">需要放松一下</div>
+      <button class="donotplay-btn" id="drowsyDismissBtn" data-i18n="popup_gotit">我知道了</button>
+      <button class="donotplay-btn" id="drowsyRestBtn" style="margin-top:8px; background:var(--primary); color:#fff;" data-i18n="popup_rest_now">立即休息</button>
+      <button class="donotplay-btn" id="drowsyDisableBtn" style="margin-top:8px; background:transparent; color:var(--hint); font-size:12px; border:1px solid var(--border);" data-i18n="popup_disable_session">本次关闭提醒</button>
     </div>
   </div>
 
@@ -386,9 +427,9 @@
   <div class="distracted-warning-popup" id="distractedWarningPopup">
     <div class="donotplay-content">
       <div class="donotplay-icon">⚠️</div>
-      <div class="donotplay-title" style="text-shadow: 0 4px 30px rgba(255, 120, 0, 0.6);">你好像不在状态</div>
-      <div class="donotplay-sub">系统检测到您当前分心，请收回注意力</div>
-      <button class="donotplay-btn" id="distractedDismissBtn">我已恢复专注</button>
+      <div class="donotplay-title" style="text-shadow: 0 4px 30px rgba(255, 120, 0, 0.6);" data-i18n="popup_dist_title">你好像不在状态</div>
+      <div class="donotplay-sub" data-i18n="popup_dist_sub">系统检测到您当前分心，请收回注意力</div>
+      <button class="donotplay-btn" id="distractedDismissBtn" data-i18n="popup_dist_btn">我已恢复专注</button>
     </div>
   </div>
 
@@ -396,9 +437,9 @@
   <div class="away-warning-popup" id="awayWarningPopup">
     <div class="donotplay-content">
       <div class="donotplay-icon">🚶</div>
-      <div class="donotplay-title">请返回办公桌</div>
-      <div class="donotplay-sub">检测到您离开已久，请恢复到工作状态</div>
-      <button class="donotplay-btn" id="awayDismissBtn">我已回来</button>
+      <div class="donotplay-title" data-i18n="popup_away_title">请返回办公桌</div>
+      <div class="donotplay-sub" data-i18n="popup_away_sub">检测到您离开已久，请恢复到工作状态</div>
+      <button class="donotplay-btn" id="awayDismissBtn" data-i18n="popup_away_btn">我已回来</button>
     </div>
   </div>
 
@@ -407,10 +448,10 @@
     <div class="donotplay-content">
       <div class="celebration-shine"></div>
       <div class="donotplay-icon" style="font-size: 150px;">🏆</div>
-      <div class="donotplay-title" style="font-size: 56px; color: #FFD700; text-shadow: 0 0 30px rgba(255,215,0,0.5);">
+      <div class="donotplay-title" style="font-size: 56px; color: #FFD700; text-shadow: 0 0 30px rgba(255,215,0,0.5);" data-i18n="popup_top3_title">
         荣耀时刻</div>
-      <div class="donotplay-sub" style="font-size: 24px; color: #fff;">恭喜！您的本次专注已成功杀入 **历史 TOP 3**</div>
-      <button class="donotplay-btn" id="celebDismissBtn"
+      <div class="donotplay-sub" style="font-size: 24px; color: #fff;" data-i18n="popup_top3_sub">恭喜！您的本次专注已成功杀入 **历史 TOP 3**</div>
+      <button class="donotplay-btn" id="celebDismissBtn" data-i18n="popup_top3_btn"
         style="margin-top: 40px; background: #FFD700; color: #000;">太棒了</button>
     </div>
   </div>
@@ -419,51 +460,65 @@
   <div class="drowsy-warning-popup" id="waterWarningPopup">
     <div class="donotplay-content">
       <div class="donotplay-icon">💧</div>
-      <div class="donotplay-title">该喝水了！</div>
-      <div class="donotplay-sub">您已经超过 60 分钟没有饮水了，请补充水分</div>
-      <button class="donotplay-btn" id="waterDismissBtn">我已饮水</button>
+      <div class="donotplay-title" data-i18n="popup_water_title">该喝水了！</div>
+      <div class="donotplay-sub" data-i18n="popup_water_sub">您已经超过 60 分钟没有饮水了，请补充水分</div>
+      <button class="donotplay-btn" id="waterDismissBtn" data-i18n="popup_water_btn">我已饮水</button>
     </div>
   </div>
 
   <div class="kbd-hint">
-    <kbd>S</kbd> 灵敏度 &nbsp; <kbd>C</kbd> 校准 &nbsp; <kbd>M</kbd> 静音 &nbsp; <kbd>T</kbd> 主题 &nbsp; <kbd>R</kbd> 刷新
+    <kbd>S</kbd> <span data-i18n="kh_sens">灵敏度</span> &nbsp; <kbd>C</kbd> <span data-i18n="kh_calib">校准</span> &nbsp; <kbd>M</kbd> <span data-i18n="kh_mute">静音</span> &nbsp; <kbd>T</kbd> <span data-i18n="kh_theme">主题</span> &nbsp; <kbd>R</kbd> <span data-i18n="kh_refresh">刷新</span>
   </div>
 
   <!-- Full-screen Pause Overlay for Break -->
   <div class="pause-overlay" id="pauseOverlay">
     <div class="pause-content">
       <img src="DoNotPlay.png" width="64" height="64" style="border-radius:50%; margin-bottom:8px;">
-      <div class="pause-label">正在休息中</div>
-      <div class="pause-quote" id="pauseQuote">放松一下，稍后回来。</div>
+      <div class="pause-label" data-i18n="pause_label">正在休息中</div>
+      <div class="pause-quote" id="pauseQuote" data-i18n="pause_quote">放松一下，稍后回来。</div>
       <div class="pause-stats">
         <div class="p-stat">
-          <div class="p-stat-lbl">已休息时长</div>
+          <div class="p-stat-lbl" data-i18n="pause_elapsed">已休息时长</div>
           <div class="p-stat-val" id="overlayRestTime">00:00</div>
         </div>
         <div class="p-stat">
-          <div class="p-stat-lbl">剩余目标时长</div>
+          <div class="p-stat-lbl" data-i18n="pause_remain">剩余目标时长</div>
           <div class="p-stat-val" id="overlayRemainTime">00:00</div>
         </div>
       </div>
-      <button class="md3-btn-filled" id="resumeFromOverlayBtn"
+      <button class="md3-btn-filled" id="resumeFromOverlayBtn" data-i18n="pause_resume"
         style="margin-top: 32px; padding: 0 40px; font-weight: 600;">恢复监控</button>
     </div>
   </div>
 
-  <!-- ML 处理已迁移到 Python 后端 (server.py) -->
-  <!-- 前端仅通过 WebSocket 接收数据，通过 MJPEG 显示画面 -->
   <!-- 全局错误捕获弹窗 -->
   <div class="donotplay-popup" id="errorPopup" style="z-index: 9999; background: rgba(0,0,0,0.9);">
     <div class="donotplay-content">
       <div class="donotplay-icon">❌</div>
-      <div class="donotplay-title" style="color: var(--red-d);">系统发生异常</div>
+      <div class="donotplay-title" style="color: var(--red-d);" data-i18n="err_title">系统发生异常</div>
       <div class="donotplay-sub" id="errorMsg"
         style="text-align: left; font-family: monospace; font-size: 12px; background: #111; padding: 10px; border-radius: 4px; max-height: 200px; overflow-y: auto; white-space: pre-wrap; margin: 20px 0;">
       </div>
       <div style="display: flex; gap: 10px; justify-content: center;">
-        <button class="donotplay-btn" id="copyErrorBtn" style="background: var(--blue); color: #fff;">复制详细错误</button>
-        <button class="donotplay-btn" id="errorDismissBtn">忽略并继续</button>
+        <button class="donotplay-btn" id="copyErrorBtn" style="background: var(--blue); color: #fff;" data-i18n="err_copy">复制详细错误</button>
+        <button class="donotplay-btn" id="errorDismissBtn" data-i18n="err_dismiss">忽略并继续</button>
       </div>
+    </div>
+  </div>
+
+  <!-- About Modal -->
+  <div class="about-overlay" id="aboutOverlay" onclick="if(event.target===this)_closeAbout()">
+    <div class="about-modal">
+      <div class="about-logo">
+        <img src="DoNotPlay.png" width="48" height="48" style="border-radius:50%;">
+        <div class="about-name">DoNotPlay</div>
+      </div>
+      <div class="about-row"><span class="about-key" data-i18n="about_version">版本</span><span id="aboutVersion" class="about-val">v2.0</span></div>
+      <div class="about-row"><span class="about-key" data-i18n="about_build">构建日期</span><span id="aboutBuild" class="about-val">—</span></div>
+      <div class="about-divider"></div>
+      <div class="about-row"><a class="about-link" href="https://qm.qq.com/q/U4htjG8mg8" target="_blank" data-i18n="about_qq">点击加入 QQ 群</a></div>
+      <div class="about-row"><a class="about-link" href="https://t.me/+x_h5I3Ns0a8xOWI1" target="_blank" data-i18n="about_tg">点击加入 Telegram Group</a></div>
+      <button class="about-close" onclick="_closeAbout()" data-i18n="about_close">关闭</button>
     </div>
   </div>
 
