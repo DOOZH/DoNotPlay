@@ -135,6 +135,4 @@ DoNotPlay 是一个纯本地运行的 AI 专注力监测工具，不联网，不
 * **[Ultralytics YOLO26](https://github.com/ultralytics/ultralytics)**
 * **[Google MediaPipe](https://github.com/google/mediapipe)**
 
-
-开源许可证 (License)
 本项目整体采用 **AGPL-3.0 License** 进行开源。
