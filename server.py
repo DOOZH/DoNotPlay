@@ -515,7 +515,7 @@ class PostureMetrics:
         self.cur_balance_deg = 0.0
         self.cur_slouch_deg = 0.0
         
-        self.slouch_machine = EventStateMachine(enter_ms=3000, exit_ms=1000)
+        self.slouch_machine = EventStateMachine(enter_ms=5000, exit_ms=1500)
         
         # 颈部自动校准：用前 N 帧的最大颈长作为"挺直"基准
         self._neck_baseline = 0.0
@@ -602,25 +602,65 @@ class HydrationDetector:
 
 
 class PhoneDetector:
-    """手机使用检测 (证据融合版 v3 - 极速响应)"""
+    """手机使用检测（v5 — 严格三优先级合议）
+
+    用户定义的判定优先级（必须 has_phone 之外）：
+      1) hand_on_phone     —— 手/手指接触手机（最高，单独足以触发）
+      2) arm_holding_phone —— 手臂举起 + 手机在画面上半（次之，单独足以触发）
+      3) gaze_lock         —— 视线锁定手机（最弱，但单证据也能触发）
+
+    单纯"手机出现"或"距离脸近"不再触发，避免桌上手机误报。
+    """
     def __init__(self):
-        # v3: 极速进入(300ms) + 极速退出(150ms) + 极短冷却(300ms)
-        self.machine = EventStateMachine(enter_ms=300, exit_ms=150, cooldown_ms=300)
+        # 0.4s 进入（从画面外拿入要快响应）/ 0.6s 退出 / 1.0s 冷却
+        self.machine = EventStateMachine(enter_ms=400, exit_ms=600, cooldown_ms=1000)
         self.state = 'normal'
         self.score = 0
         self.duration_ms = 0
-    
-    def update(self, current_time, has_phone, phone_near_face, gaze_lock, work_context):
-        score = 0
-        if has_phone: score += 45     # 提高: YOLO 看到手机即高分
-        if phone_near_face: score += 35
-        if gaze_lock: score += 40
-        if work_context: score -= 15  # 降低抑制，避免漏检
-        
+
+    def update(self, current_time, has_phone,
+               hand_on_phone=False, arm_holding_phone=False, gaze_lock=False,
+               work_context=False, wrists_visible=True, **_legacy):
+        # 兼容旧调用：吃掉 phone_near_face 等历史参数（不再参与判定）
+        if not has_phone:
+            self.machine.update(False, current_time)
+            self.state = 'normal'; self.score = 0
+            self.duration_ms = self.machine.duration_ms
+            return False
+
+        has_evidence = hand_on_phone or arm_holding_phone or gaze_lock
+        if not has_evidence:
+            self.machine.update(False, current_time)
+            self.state = 'normal'; self.score = 15
+            self.duration_ms = self.machine.duration_ms
+            return False
+
+        # 按优先级取基础分（互斥，保证 P1 > P2 > P3 语义）
+        if hand_on_phone:
+            score = 80
+        elif arm_holding_phone:
+            score = 70
+        else:  # 仅 gaze_lock
+            score = 55
+
+        # 多证据叠加加分
+        if hand_on_phone and gaze_lock:         score += 15
+        if arm_holding_phone and gaze_lock:     score += 10
+        if hand_on_phone and arm_holding_phone: score += 10
+
+        # 工作场景仅在"只有视线证据"时抑制
+        if work_context and not (hand_on_phone or arm_holding_phone):
+            score -= 20
+
+        # ── 关键防误报：当摄像头看不到手腕（手不在画面 / 被遮挡）──
+        # 没有手腕证据时，禁止单证据触发：必须 arm_holding_phone + gaze_lock 双证据
+        # 这样可避免「桌面上放着手机但人没在玩」被误判
+        if not wrists_visible and not hand_on_phone:
+            if not (arm_holding_phone and gaze_lock):
+                score -= 40  # 强力压制单证据情形
+
         self.score = int(np.clip(score, 0, 100))
-        # v3: 降低门槛到 40，仅 has_phone(45) 几乎就能触发
-        is_triggered = self.score >= 40
-        
+        is_triggered = self.score >= 50
         is_confirmed = self.machine.update(is_triggered, current_time)
         self.state = 'using' if is_confirmed else 'normal'
         self.duration_ms = self.machine.duration_ms
@@ -628,10 +668,10 @@ class PhoneDetector:
 
 
 class AttentionDetector:
-    """分心检测 (广角迟滞版 - 增强响应速度)"""
+    """分心检测（多信号合议迟滞版 — 平衡响应与误报）"""
     def __init__(self):
-        # 【增强】进入延迟缩短到 0.6s，大幅提升响应灵敏度
-        self.machine = EventStateMachine(enter_ms=600, exit_ms=400, cooldown_ms=1000)
+        # 进入 0.8s 避免瞥一眼误报；退出 0.4s 快速恢复；冷却 800ms
+        self.machine = EventStateMachine(enter_ms=800, exit_ms=400, cooldown_ms=800)
         self.state = 'focused'
         self.duration_ms = 0
     
@@ -654,8 +694,8 @@ class AttentionDetector:
 class AwayDetector:
     """离开检测 (支持 Warmup 与 Suspect 状态 - 增强灵敏度)"""
     def __init__(self, warmup_duration=4.0):
-        # 极简修改：人脸 2 秒钟没有出现就离席；人脸只要出现，瞬间返回
-        self.machine = EventStateMachine(enter_ms=2000, exit_ms=0)
+        # 人脸 3 秒未出现才判定离席；出现立刻返回；防抖动更稳
+        self.machine = EventStateMachine(enter_ms=3000, exit_ms=0)
         self.warmup_until = time.time() + warmup_duration
         self.state = 'present'
         self.duration_ms = 0
@@ -1111,13 +1151,13 @@ BBOX_LABELS = {
     'clock':      '时钟',
 }
 
-# 姿态连线定义 (肩膀、手肘、手腕)
+# 姿态连线定义 (肩膀、手肘、手腕) — 全部低饱和度 slate / muted teal
 SKELETON_CONNECTIONS = [
-    (5, 6, (0, 255, 255)),   # 肩膀连线 (青色)
-    (5, 7, (0, 165, 255)),   # 左大臂 (橙色)
-    (7, 9, (0, 165, 255)),   # 左小臂
-    (6, 8, (255, 165, 0)),   # 右大臂 (蓝色)
-    (8, 10, (255, 165, 0)),  # 右小臂
+    (5, 6, (170, 170, 170)),  # 肩膀连线 (中性灰)
+    (5, 7, (155, 165, 175)),  # 左大臂 (冷灰)
+    (7, 9, (155, 165, 175)),  # 左小臂
+    (6, 8, (155, 165, 175)),  # 右大臂
+    (8, 10, (155, 165, 175)), # 右小臂
 ]
 
 # 字体配置 (Windows 系统黑体)
@@ -1151,25 +1191,31 @@ def draw_chinese_text(img, text, position, font_size=20, color=(255, 255, 255), 
     draw.text(position, text, font=font, fill=color)
     return cv2.cvtColor(np.array(img_pil), cv2.COLOR_RGB2BGR)
 
-def draw_tech_box(img, x1, y1, w, h, color, label, score=None):
-    """【增强版】绘制显眼的物体框，并带有中文标签和置信度"""
-    x2, y2 = x1 + w, y1 + h
-    # 绘制半透明边框
-    cv2.rectangle(img, (x1, y1), (x2, y2), color, 1)
-    # 绘制四角加重 (L型)
-    l = int(min(w, h) * 0.15)
-    cv2.line(img, (x1, y1), (x1+l, y1), color, 2)
-    cv2.line(img, (x1, y1), (x1, y1+l), color, 2)
-    cv2.line(img, (x2, y1), (x2-l, y1), color, 2)
-    cv2.line(img, (x2, y1), (x2, y1+l), color, 2)
-    cv2.line(img, (x1, y2), (x1+l, y2), color, 2)
-    cv2.line(img, (x1, y2), (x1, y2-l), color, 2)
-    cv2.line(img, (x2, y2), (x2-l, y2), color, 2)
-    cv2.line(img, (x2, y2), (x2, y2-l), color, 2)
+# BGR 低饱和度调色板：把任何鲜艳色统一去饱和
+def _desaturate_bgr(color, sat=0.45):
+    """把 BGR 颜色按比例向中灰 (128,128,128) 拉，得到低饱和版本。"""
+    b, g, r = color
+    return (int(b * sat + 128 * (1 - sat)),
+            int(g * sat + 128 * (1 - sat)),
+            int(r * sat + 128 * (1 - sat)))
 
-    # 绘制标签背景
-    txt = f"{label} {score if score else ''}"
-    img[:] = draw_chinese_text(img, txt, (x1, y1 - 22 if y1 > 25 else y1 + 5), font_size=14, color=(255, 255, 255), bg_color=color)
+def draw_tech_box(img, x1, y1, w, h, color, label, score=None):
+    """低饱和细线框：仅四角 L 型短笔触 + 小号文字标签，无背景填充。"""
+    color = _desaturate_bgr(color, 0.5)  # 强制去饱和
+    x2, y2 = x1 + w, y1 + h
+    # 仅四角 L 型短笔触（去掉完整边框，更轻盈）
+    l = max(6, int(min(w, h) * 0.12))
+    cv2.line(img, (x1, y1), (x1+l, y1), color, 1)
+    cv2.line(img, (x1, y1), (x1, y1+l), color, 1)
+    cv2.line(img, (x2, y1), (x2-l, y1), color, 1)
+    cv2.line(img, (x2, y1), (x2, y1+l), color, 1)
+    cv2.line(img, (x1, y2), (x1+l, y2), color, 1)
+    cv2.line(img, (x1, y2), (x1, y2-l), color, 1)
+    cv2.line(img, (x2, y2), (x2-l, y2), color, 1)
+    cv2.line(img, (x2, y2), (x2, y2-l), color, 1)
+    # 极简文字标签：无背景，紧贴左上
+    txt = f"{label} {score if score else ''}".strip()
+    img[:] = draw_chinese_text(img, txt, (x1, max(0, y1 - 16)), font_size=11, color=color, bg_color=None)
 
 def draw_runtime_hud(img, face_info, pose_info, object_info, det_count=0):
     """简约 HUD：眼/肩/物 三行，低饱和度配色，减少视觉干扰"""
@@ -1225,16 +1271,8 @@ def draw_hud_decoration(img, w, h, state):
     cv2.line(img, (bar_x, bar_y + bar_h), (bar_x, bar_y + bar_h - fill_len), color_bar, 2)
 
 def draw_face_hud(img, state, face_center, face_h):
-    """【简约化】移除人脸大框，仅在眉心或眼睛附近显示微小标记"""
-    if not face_center: return
-    cx, cy = int(face_center[0]), int(face_center[1])
-    color = (150, 150, 150)
-    # 仅在中心画一个小十字准星（极细）
-    cv2.line(img, (cx-3, cy), (cx+3, cy), color, 1)
-    cv2.line(img, (cx, cy-3), (cx, cy+3), color, 1)
-    
-    # 侧边仅显示极小的数值提示
-    draw_chinese_text(img, f"POS:{int(state.yaw)},{int(state.pitch)}", (cx + 10, cy - 10), 10, (120, 120, 120))
+    """已禁用：用户要求不在人脸上加任何方框/十字/文字标记"""
+    return
 
 def draw_gaze_hud(img, state, face_center):
     """【简约化】视线提示"""
@@ -1263,43 +1301,29 @@ def draw_skeleton_hud(img, pose_map, w, h):
             lx, ly = int(ls['x']*w), int(ls['y']*h)
             rx, ry = int(rs['x']*w), int(rs['y']*h)
             mid_y = (ly + ry) // 2
-            # 绘制完美水平参考虚线
-            cv2.line(img, (lx - 20, mid_y), (rx + 20, mid_y), (150, 150, 150), 1)
-            # 绘制当前肩膀连线
-            tilt_color = (80, 180, 80) if abs(ly - ry) < (h * 0.03) else (80, 120, 175)
-            if abs(ly - ry) > (h * 0.06): tilt_color = (80, 80, 160)
-            cv2.line(img, (lx, ly), (rx, ry), tilt_color, 2)
-            # 绘制落差指示
-            cv2.line(img, (lx, ly), (lx, mid_y), tilt_color, 1)
-            cv2.line(img, (rx, ry), (rx, mid_y), tilt_color, 1)
+            # 水平参考线 — 仅在肩膀明显倾斜时才绘制（减少视觉干扰）
+            if abs(ly - ry) > (h * 0.025):
+                # 当前肩膀连线（低饱和：好绿/警告暖灰/差冷灰）
+                tilt_color = (155, 175, 160) if abs(ly - ry) < (h * 0.05) else (165, 160, 180)
+                cv2.line(img, (lx, ly), (rx, ry), tilt_color, 1)
 
-    # 1.2 【新增】重心垂直引导线 (Spine Axis)
-    if 0 in pose_map and (5 in pose_map or 6 in pose_map):
-        nose = pose_map[0]
-        if nose.get('z', 0) > 0.3:
-            nx, ny = int(nose['x']*w), int(nose['y']*h)
-            # 从鼻子垂直向下画一条细线，辅助观察身体偏转
-            cv2.line(img, (nx, ny), (nx, h), (200, 200, 200), 1, cv2.LINE_AA)
+    # 1.2 重心垂直引导线 — 已按用户要求移除（鼻子向下的直线视觉干扰过强）
 
-    # 2. 绘制核心关键点
+    # 2. 绘制核心关键点（低饱和度小点，避免抢戏）
     for idx, pt in pose_map.items():
-        # 放宽显示过滤 (Task 2): 只要坐标在大致合理范围内就渲染，减少 z 的强限制
-        # z > 0.05 是为了过滤掉完全没有置信度的异常点
         if pt.get('z', 0) > 0.05:
             cx, cy = int(pt['x'] * w), int(pt['y'] * h)
-            # 不同部位不同颜色
-            color = (255, 255, 255)
-            if idx == 0: color = (0, 255, 255) # 鼻子-黄
-            elif idx in [5,6]: color = (0, 165, 255) # 肩膀-橙
-            elif idx in [9,10]: color = (255, 0, 255) # 手腕-紫
-            cv2.circle(img, (cx, cy), 4, color, -1)
-            cv2.circle(img, (cx, cy), 5, (0,0,0), 1)
+            # 全部使用低饱和灰阶，仅以小色相区分部位
+            color = (180, 180, 180)
+            if idx in [5, 6]: color = (165, 175, 185)   # 肩膀
+            elif idx in [9, 10]: color = (185, 170, 180) # 手腕
+            cv2.circle(img, (cx, cy), 3, color, -1)
 
 # ═══════════════════════════════════════════════════════════════
 #  环境模式和运行信息
 # ═══════════════════════════════════════════════════════════════
 # 运行元信息：模型引擎标签
-APP_VERSION = "2.0"
+APP_VERSION = "3.0"
 # Build time: use exe mtime when frozen (packaged), else current datetime
 if getattr(sys, 'frozen', False):
     try:
@@ -1430,7 +1454,7 @@ SENS_TABLE = [
 # 四角校准后的阈值修正系数 [严格, 正常, 双屏, 多屏]
 # 乘以校准半范围，得到最终有效阈值
 # 正常/双屏/多屏 加 30% 缓冲，防止用户在校准边缘时误判走神
-SENS_MULTIPLIERS = [1.0, 1.3, 1.3, 1.3]
+SENS_MULTIPLIERS = [1.1, 1.3, 1.3, 1.3]
 # 双屏/多屏额外增加的横向角度容忍量(度)
 SENS_BONUS_YAW   = [0,   0,  30,  60]
 
@@ -2526,13 +2550,13 @@ def vision_loop():
                 slouch_angle = 0.0
                 is_slouching = False
                 if pose_map:
-                    # 瞬时状态判断
+                    # 手腕上抬判定——放宽为 y < 0.80（原为 0.70，举手机到胸前的姿势也计入）
                     detect_up = False
                     if pose_map.get(9) and pose_map.get(10):
-                        if pose_map[9]['y'] < 0.7 or pose_map[10]['y'] < 0.7:
+                        if pose_map[9]['y'] < 0.80 or pose_map[10]['y'] < 0.80:
                             detect_up = True
                     
-                    # 消抖处理 (基于 5 帧积算)
+                    # 消抖处理：3 帧即可（原为 5 帧，从画面外拿入时响应更快）
                     with state.lock:
                         # 安全检查：确保变量存在（防御旧进程残留）
                         if not hasattr(state, 'arm_up_frames'): state.arm_up_frames = 0
@@ -2541,13 +2565,15 @@ def vision_loop():
                             state.arm_up_frames = min(state.arm_up_frames + 1, 10)
                         else:
                             state.arm_up_frames = max(state.arm_up_frames - 1, 0)
-                        # 达到 5 帧才正式判定为抬起
-                        is_arm_up = state.arm_up_frames >= 5
+                        is_arm_up = state.arm_up_frames >= 3
                         
                         # 【新增】：手腕与桌面物品(键盘/书籍)的交互判定，防止低头看书误判离开
                         hands_visible = False
                         left_wrist = pose_map.get(9)
                         right_wrist = pose_map.get(10)
+                        # 把手腕信号导出到 BaseSignals 供下游模块（如 PhoneDetector）使用
+                        state.signals.left_wrist = left_wrist
+                        state.signals.right_wrist = right_wrist
                         if left_wrist or right_wrist:
                             for det in last_yolo_detections:
                                 if det['class'] in ['keyboard', 'laptop', 'book']:
@@ -2638,12 +2664,32 @@ def vision_loop():
                                     mean_p = sum(pitches) / len(pitches)
                                     std_y = (sum((v - mean_y)**2 for v in yaws) / len(yaws)) ** 0.5
                                     std_p = (sum((v - mean_p)**2 for v in pitches) / len(pitches)) ** 0.5
-                                    if std_y < 4.0 and std_p < 4.0:
+                                    # Trigger if stable (std < 8°) OR if we have enough samples regardless of stability
+                                    if std_y < 8.0 and std_p < 8.0:
                                         state.calib_corner_auto_ready = {
                                             'step': state.calib_corner_step,
                                             'yaw':  round(mean_y, 4),
                                             'pitch': round(mean_p, 4),
                                         }
+                                # Force-trigger after 50 samples even if noisy (use best 20-sample window)
+                                elif len(samp) >= 50 and state.calib_corner_auto_ready is None:
+                                    best_start, best_std = 0, float('inf')
+                                    for i in range(len(samp) - 20):
+                                        window = samp[i:i+20]
+                                        wy = [s['yaw'] for s in window]
+                                        mean_w = sum(wy) / 20
+                                        std_w = (sum((v - mean_w)**2 for v in wy) / 20) ** 0.5
+                                        if std_w < best_std:
+                                            best_std = std_w
+                                            best_start = i
+                                    window = samp[best_start:best_start+20]
+                                    mean_y = sum(s['yaw'] for s in window) / 20
+                                    mean_p = sum(s['pitch'] for s in window) / 20
+                                    state.calib_corner_auto_ready = {
+                                        'step': state.calib_corner_step,
+                                        'yaw':  round(mean_y, 4),
+                                        'pitch': round(mean_p, 4),
+                                    }
 
                 # 疲劳度 PERCLOS 计算与眨眼检测
                 if face_detected:
@@ -2831,11 +2877,12 @@ def vision_loop():
                             elif cls_name == 'book': has_book = True
                             box_label = display_label
                         
-                        draw_tech_box(display_frame, int(bx), int(by), int(bw), int(bh), color, box_label, score)
+                        # 跳过人体框：人本身不需要边框（骨架连线已提供位置信息）
+                        if cls_name != 'person':
+                            draw_tech_box(display_frame, int(bx), int(by), int(bw), int(bh), color, box_label, score)
                     else:
-                        # B. 非业务目标物体 (RAW 模式可视化)
-                        # 使用灰色 Box，仅用于协助用户排查模型“看错”了什么
-                        draw_tech_box(display_frame, int(bx), int(by), int(bw), int(bh), (150, 150, 150), display_label, score)
+                        # B. 非业务目标（RAW 模式）— 不再绘制任何框，避免打扰画面
+                        pass
 
                 # —— 调试日志：输出最终识别摘要 ——
                 if raw_det_count > 0:
@@ -3005,22 +3052,89 @@ def vision_loop():
                 is_drinking_evidence = state.signals.has_cup and (cup_near_mouth or (mar_val > 0.35 and is_arm_up) or (is_arm_up and adj_pitch < -3))
                 state.metrics['hydration'].update(now, is_drinking_evidence)
                     
-                # 3. 手机判定证据
-                phone_near_face = False
+                # 3. 手机判定证据（v5 严格三优先级）
+                #    P1 hand_on_phone：手腕落入手机 bbox（30% 容差）
+                #    P2 arm_holding_phone：三路任一满足
+                #       a) 显式手臂上抬 + 手机位于画面上 75%
+                #       b) 手机面积 ≥2% 且位于画面中央上半（拿近镜头看的典型）
+                #       c) 手机底部接触画面下边缘（从外部拿入的典型特征）
+                #    P3 gaze_in_phone：视线落入手机 bbox
+                #    不再使用「手机距脸近」，以免桌上手机误报
                 gaze_in_phone = False
-                if state.signals.has_phone and nose_px:
+                hand_on_phone = False
+                arm_holding_phone = False
+                if state.signals.has_phone:
                     for det in last_yolo_detections:
                         if det['class'] in PHONE_CLASSES:
-                            bx, by, bw, bh = det['bbox']
-                            dist = np.hypot(bx + bw*0.5 - nose_px[0], by + bh*0.5 - nose_px[1])
-                            # 同步修正判定距离至 50% 帧宽
-                            if dist < (w * 0.50): phone_near_face = True
-                            # 修正：增加 gaze_x >= 0 检查，防止人脸丢失时的边界误报
-                            if gaze_x >= 0 and (bx-40) <= gaze_x <= (bx+bw+40) and (by-40) <= gaze_y <= (by+bh+40): 
+                            bx, by, bw_p, bh_p = det['bbox']
+                            phone_cx = bx + bw_p * 0.5
+                            phone_cy = by + bh_p * 0.5
+                            phone_area_ratio = (bw_p * bh_p) / max(w * h, 1)
+
+                            # P1：手腕在手机 bbox 内（30% 容差）
+                            pad_x, pad_y = bw_p * 0.30, bh_p * 0.30
+                            for wrist in (state.signals.left_wrist, state.signals.right_wrist):
+                                if wrist is None:
+                                    continue
+                                try:
+                                    wx = wrist['x'] * w if isinstance(wrist, dict) else wrist[0] * w
+                                    wy = wrist['y'] * h if isinstance(wrist, dict) else wrist[1] * h
+                                except (KeyError, IndexError, TypeError):
+                                    continue
+                                if (bx - pad_x) <= wx <= (bx + bw_p + pad_x) and \
+                                   (by - pad_y) <= wy <= (by + bh_p + pad_y):
+                                    hand_on_phone = True
+                                    break
+
+                            # P2：三路“举起手机”判定
+                            #   a) 显式手臂上抬 + 手机在画面上 75%
+                            if is_arm_up and phone_cy < (h * 0.75):
+                                arm_holding_phone = True
+                            #   b) 手机面积 >= 2% 且位于画面中央上半区（拿近看）
+                            elif phone_area_ratio >= 0.02 and phone_cy < (h * 0.65) and \
+                                 (w * 0.10) < phone_cx < (w * 0.90):
+                                arm_holding_phone = True
+                            #   c) 手机底部贴近画面下边缘 + 上边未贴顶（从下拿入画面的特征）
+                            elif (by + bh_p) >= (h * 0.92) and phone_cy < (h * 0.85) and phone_area_ratio >= 0.005:
+                                arm_holding_phone = True
+
+                            # P3：视线锁定手机
+                            if gaze_x >= 0 and (bx-40) <= gaze_x <= (bx+bw_p+40) and \
+                               (by-40) <= gaze_y <= (by+bh_p+40):
                                 gaze_in_phone = True
+
+                            # P4：手机正在被移动（连续帧位移显著）
+                            #     窗口长度 6 帧（约 0.5-1s 视帧率），累计位移 > 帧宽 8%
+                            #     可识别"从画面外拿入"、"边走边玩"、"在手里调整角度"等动态场景
+                            if not hasattr(state, '_phone_pos_hist'):
+                                state._phone_pos_hist = deque(maxlen=6)
+                            state._phone_pos_hist.append((phone_cx / max(w, 1), phone_cy / max(h, 1), now))
+                            if len(state._phone_pos_hist) >= 4:
+                                # 计算窗口内累计位移（归一化坐标）
+                                pts = list(state._phone_pos_hist)
+                                cumdist = 0.0
+                                for i in range(1, len(pts)):
+                                    dx = pts[i][0] - pts[i-1][0]
+                                    dy = pts[i][1] - pts[i-1][1]
+                                    cumdist += (dx * dx + dy * dy) ** 0.5
+                                # 窗口时间跨度（秒），过滤掉因长间隔造成的虚假位移
+                                tspan = pts[-1][2] - pts[0][2]
+                                if 0.15 < tspan < 2.0 and cumdist > 0.08:
+                                    arm_holding_phone = True
                             break
-                    
-                state.metrics['phone'].update(now, state.signals.has_phone, phone_near_face, gaze_in_phone, (has_keyboard or has_book))
+                # 没看到手机：清空位置历史，避免下次出现时残留旧位置
+                if not state.signals.has_phone and hasattr(state, '_phone_pos_hist'):
+                    state._phone_pos_hist.clear()
+
+                state.metrics['phone'].update(
+                    now, state.signals.has_phone,
+                    hand_on_phone=hand_on_phone,
+                    arm_holding_phone=arm_holding_phone,
+                    gaze_lock=gaze_in_phone,
+                    work_context=(has_keyboard or has_book),
+                    wrists_visible=(state.signals.left_wrist is not None
+                                    or state.signals.right_wrist is not None),
+                )
                     
                 # 4. 姿态判定 — 仅在有有效姿态数据时更新
                 if face_detected_smoothed or pose_detected_smoothed:
@@ -3044,12 +3158,12 @@ def vision_loop():
                 with state.lock:
                     _fhy = state.focus_half_yaw
                     _fhp = state.focus_half_pitch
-                if _fhy > 0:  # 已做四角校准
-                    _eff_yaw_t = _fhy * SENS_MULTIPLIERS[SENS_IDX] + SENS_BONUS_YAW[SENS_IDX]
-                    _eff_pitch_t = _fhp * SENS_MULTIPLIERS[SENS_IDX]
+                if _fhy > 0:  # 已做四角校准：直接使用校准结果，不加倍率
+                    _eff_yaw_t = _fhy
+                    _eff_pitch_t = _fhp
                 else:
-                    _eff_yaw_t = YAW_T
-                    _eff_pitch_t = PITCH_T
+                    _eff_yaw_t = 25.0   # 未校准时的固定默认值
+                    _eff_pitch_t = 15.0
                 state.metrics['attention'].update(now, adj_yaw, adj_pitch, (has_keyboard or has_book), 
                                                  is_using_phone, 
                                                  state.metrics['away'].state == 'away',
@@ -3203,11 +3317,105 @@ def restart_process():
 # ══════════════════════════════════════════
 #  WebSocket 服务器
 # ══════════════════════════════════════════
+
+# ── Windows 系统通知（无第三方依赖，PowerShell + WinRT Toast）────
+_LAST_TOAST_AT = 0.0
+_LAST_TOAST_KEY = ""
+_AUMID_REGISTERED = False
+TOAST_AUMID = "DoNotPlay"
+
+def _register_aumid_once():
+    """在 HKCU 注册自定义 AUMID，让 Toast 标题显示 DoNotPlay 而不是 PowerShell/资源管理器。"""
+    global _AUMID_REGISTERED
+    if _AUMID_REGISTERED or sys.platform != 'win32':
+        return
+    try:
+        import winreg
+        key_path = r"Software\Classes\AppUserModelId\\" + TOAST_AUMID
+        with winreg.CreateKey(winreg.HKEY_CURRENT_USER, key_path) as k:
+            winreg.SetValueEx(k, "DisplayName", 0, winreg.REG_SZ, "DoNotPlay")
+            winreg.SetValueEx(k, "ShowInSettings", 0, winreg.REG_DWORD, 1)
+        _AUMID_REGISTERED = True
+        logging.info(f"[TOAST] 已注册 AUMID: {TOAST_AUMID}")
+    except Exception as e:
+        logging.warning(f"[TOAST] AUMID 注册失败: {e}")
+
+def show_windows_toast(title: str, body: str):
+    """在 Windows 右下角弹出原生 Toast 通知。无 PowerShell 模块依赖。"""
+    global _LAST_TOAST_AT, _LAST_TOAST_KEY
+    try:
+        if sys.platform != 'win32':
+            return
+        now = time.time()
+        key = f"{title}|{body}"
+        # 节流：同文案 8 秒内不重复，任意通知 1 秒最小间隔
+        if (now - _LAST_TOAST_AT) < 1.0:
+            logging.info(f"[TOAST] 跳过(1s 节流): {title}")
+            return
+        if key == _LAST_TOAST_KEY and (now - _LAST_TOAST_AT) < 8.0:
+            logging.info(f"[TOAST] 跳过(同文案去重): {title}")
+            return
+        _LAST_TOAST_AT = now
+        _LAST_TOAST_KEY = key
+        _register_aumid_once()
+
+        # 转义 XML 特殊字符
+        def _esc(s):
+            return (s or '').replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;')
+        t_xml = _esc(title or 'DoNotPlay')
+        b_xml = _esc(body or '')
+        ps_script = (
+            "$ErrorActionPreference='Continue'\n"
+            "try {\n"
+            "[Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType=WindowsRuntime] | Out-Null\n"
+            "[Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom, ContentType=WindowsRuntime] | Out-Null\n"
+            f"$xml = '<toast><visual><binding template=\"ToastText02\"><text id=\"1\">{t_xml}</text><text id=\"2\">{b_xml}</text></binding></visual></toast>'\n"
+            "$doc = New-Object Windows.Data.Xml.Dom.XmlDocument\n"
+            "$doc.LoadXml($xml)\n"
+            "$toast = [Windows.UI.Notifications.ToastNotification]::new($doc)\n"
+            f"[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('{TOAST_AUMID}').Show($toast)\n"
+            "Write-Output 'OK'\n"
+            "} catch { Write-Error $_.Exception.Message; exit 2 }\n"
+        )
+        # 写到临时 .ps1 文件，避免 EncodedCommand 解析陷阱
+        import tempfile
+        tmpf = tempfile.NamedTemporaryFile(mode='w', suffix='.ps1', delete=False, encoding='utf-8-sig')
+        tmpf.write(ps_script)
+        tmpf.close()
+        ps_path = tmpf.name
+        proc = subprocess.Popen(
+            ['powershell.exe', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-File', ps_path],
+            creationflags=0x08000000,
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE
+        )
+        logging.info(f"[TOAST] PS 启动 (PID={proc.pid}) script={ps_path}: {title}")
+        def _drain(p, path):
+            try:
+                o, e = p.communicate(timeout=10)
+                logging.info(f"[TOAST] PS RC={p.returncode} STDOUT={o[:200]!r} STDERR={e[:500]!r}")
+            except Exception as ex:
+                logging.warning(f"[TOAST] PS drain 异常: {ex}")
+            finally:
+                try: os.unlink(path)
+                except: pass
+        threading.Thread(target=_drain, args=(proc, ps_path), daemon=True).start()
+    except Exception as e:
+        logging.warning(f"[TOAST] 系统通知失败: {e}")
+
+
 async def ws_handler(websocket, path=""):
     """双向通信处理器：不仅推理状态，还接收前端控制指令"""
     try:
         logging.info(f"[WS-CONN] ⚡ 收到新的 WebSocket 连接请求: {websocket.remote_address}")
     
+        # 关键修复：新连接建立时强制清除残留 paused 状态，防止页面刷新后摄像头卡在"休息模式"
+        with state.lock:
+            if state.is_monitoring_paused:
+                logging.info("[WS-INIT] 检测到残留 paused 状态，已自动清除以恢复摄像头")
+                state.is_monitoring_paused = False
+                if state.status == 'paused':
+                    state.status = 'active'
+
         # 建立连接时先同步当前配置给前端
         config_payload = {
             'type': 'config_sync',
@@ -3308,6 +3516,12 @@ async def ws_handler(websocket, path=""):
                             if state.is_monitoring_paused:
                                 state.status = 'paused'
                         logging.info(f"[WS] 监控状态切换: {'暂停' if state.is_monitoring_paused else '恢复'}")
+                    elif data.get('cmd') == 'notify_os':
+                        # 前端转发的系统通知请求（pywebview 环境下的兜底）
+                        title = str(data.get('title', 'DoNotPlay'))[:80]
+                        body = str(data.get('body', ''))[:200]
+                        logging.info(f"[TOAST] 收到通知请求: {title} | {body}")
+                        show_windows_toast(title, body)
                     elif data.get('cmd') == 'set_theme':
                         with state.lock:
                             state.current_theme = data.get('theme', 'dark')
@@ -3437,6 +3651,505 @@ _EVENT_OBJECT_NAMECHANGE  = 0x800C
 _OBJID_WINDOW             = 0
 _WM_QUIT                  = 0x0012
 _BROWSER_PROCS = {'chrome.exe', 'msedge.exe', 'firefox.exe', 'brave.exe', 'vivaldi.exe', 'opera.exe'}
+
+# ──────────────────────────────────────────────────────────────────
+#  窗口归一化：应用别名 + 网站域名合并 + 系统噪音过滤
+#  目标：反映用户实际使用场景，而非窗口标题的花哨变体
+# ──────────────────────────────────────────────────────────────────
+
+# 完全忽略的系统外壳/辅助进程（不计入任何统计）
+_IGNORE_PROCS = {
+    'explorer.exe',           # 贴靠助手/任务切换
+    'searchhost.exe',         # Windows 搜索
+    'searchapp.exe',
+    'startmenuexperiencehost.exe',
+    'shellexperiencehost.exe',
+    'textinputhost.exe',
+    'lockapp.exe',
+    'systemsettings.exe',     # 设置面板
+    'applicationframehost.exe',
+    'dwm.exe', 'sihost.exe', 'fontdrvhost.exe',
+    'ctfmon.exe', 'runtimebroker.exe',
+    # 任务栏/通知中心类
+    'taskmgr.exe',            # 任务管理器默认不计
+}
+
+# 标题关键词黑名单（命中则忽略；不区分大小写）
+_IGNORE_TITLE_PATTERNS = (
+    '贴靠助手', '任务切换', '任务视图', 'program manager',
+    'windows input experience', '开始', '搜索',
+    '桌面窗口管理器', 'cortana', '通知中心',
+    '截图和草图', '截图工具',
+)
+
+# 进程名 → 友好显示名（小写匹配）。未命中的进程会用文件名自动生成。
+_APP_NAME_MAP = {
+    'code.exe': 'VS Code',
+    'cursor.exe': 'Cursor',
+    'devenv.exe': 'Visual Studio',
+    'pycharm64.exe': 'PyCharm', 'pycharm.exe': 'PyCharm',
+    'idea64.exe': 'IntelliJ IDEA', 'idea.exe': 'IntelliJ IDEA',
+    'webstorm64.exe': 'WebStorm',
+    'goland64.exe': 'GoLand',
+    'clion64.exe': 'CLion',
+    'android studio.exe': 'Android Studio', 'studio64.exe': 'Android Studio',
+    'sublime_text.exe': 'Sublime Text',
+    'notepad.exe': '记事本',
+    'notepad++.exe': 'Notepad++',
+    'winword.exe': 'Word',
+    'excel.exe': 'Excel',
+    'powerpnt.exe': 'PowerPoint',
+    'onenote.exe': 'OneNote',
+    'outlook.exe': 'Outlook',
+    'wpsoffice.exe': 'WPS', 'wps.exe': 'WPS', 'et.exe': 'WPS', 'wpp.exe': 'WPS',
+    'acrobat.exe': 'Adobe Acrobat', 'acrord32.exe': 'Adobe Reader',
+    'sumatrapdf.exe': 'SumatraPDF',
+    'obsidian.exe': 'Obsidian',
+    'typora.exe': 'Typora',
+    'notion.exe': 'Notion',
+    'chrome.exe': 'Chrome',
+    'msedge.exe': 'Edge',
+    'firefox.exe': 'Firefox',
+    'brave.exe': 'Brave',
+    'vivaldi.exe': 'Vivaldi',
+    'opera.exe': 'Opera',
+    'wechat.exe': '微信', 'wechatappex.exe': '微信',
+    'qq.exe': 'QQ', 'qqmusic.exe': 'QQ 音乐',
+    'dingtalk.exe': '钉钉',
+    'lark.exe': '飞书', 'feishu.exe': '飞书',
+    'telegram.exe': 'Telegram',
+    'discord.exe': 'Discord',
+    'slack.exe': 'Slack',
+    'zoom.exe': 'Zoom',
+    'teams.exe': 'Teams', 'msteams.exe': 'Teams',
+    'spotify.exe': 'Spotify',
+    'neteasemusic.exe': '网易云音乐', 'cloudmusic.exe': '网易云音乐',
+    'steam.exe': 'Steam',
+    'photoshop.exe': 'Photoshop',
+    'illustrator.exe': 'Illustrator',
+    'figma.exe': 'Figma',
+    'unity.exe': 'Unity',
+    'unrealeditor.exe': 'Unreal Editor',
+    'blender.exe': 'Blender',
+    'obs64.exe': 'OBS', 'obs.exe': 'OBS',
+    'mpc-hc64.exe': 'MPC-HC', 'potplayermini64.exe': 'PotPlayer', 'potplayer.exe': 'PotPlayer',
+    'vlc.exe': 'VLC',
+    'cmd.exe': '命令提示符',
+    'powershell.exe': 'PowerShell', 'pwsh.exe': 'PowerShell',
+    'windowsterminal.exe': 'Windows 终端',
+    'wt.exe': 'Windows 终端',
+    'conemu64.exe': 'ConEmu',
+    'xshell.exe': 'Xshell',
+    'everything.exe': 'Everything',
+    'utools.exe': 'uTools',
+    'qqbrowser.exe': 'QQ 浏览器',
+    '360se.exe': '360 浏览器', '360chrome.exe': '360 极速浏览器',
+    'sogouexplorer.exe': '搜狗浏览器',
+    # ── 中文友好名：Windows 系统进程 ──
+    'systemsettings.exe': 'Windows 设置',
+    'applicationframehost.exe': 'UWP 应用容器',
+    'textinputhost.exe': '输入面板',
+    'searchapp.exe': 'Windows 搜索', 'searchhost.exe': 'Windows 搜索', 'searchui.exe': 'Windows 搜索',
+    'startmenuexperiencehost.exe': '开始菜单',
+    'lockapp.exe': '锁屏',
+    'shellexperiencehost.exe': 'Shell 体验',
+    'explorer.exe': '资源管理器',
+    'taskmgr.exe': '任务管理器',
+    'control.exe': '控制面板', 'controlcenter.exe': '控制面板',
+    'msinfo32.exe': '系统信息',
+    'mmc.exe': '管理控制台',
+    'regedit.exe': '注册表编辑器',
+    'sihost.exe': 'Shell 基础架构',
+    'fontview.exe': '字体查看器',
+    'fontdrvhost.exe': '字体驱动',
+    'dwm.exe': '桌面窗口管理器',
+    'csrss.exe': '客户端/服务器子系统',
+    'winlogon.exe': '登录管理器',
+    'tabtip.exe': '触摸键盘',
+    'inputexperience.exe': '输入体验',
+    'magnify.exe': '放大镜',
+    'osk.exe': '屏幕键盘',
+    'narrator.exe': '讲述人',
+    'stikynot.exe': '便笺',
+    'wordpad.exe': '写字板',
+    'mspaint.exe': '画图',
+    'calc.exe': '计算器', 'calculator.exe': '计算器',
+    'snippingtool.exe': '截图工具',
+    'gamebar.exe': 'Xbox Game Bar',
+    'taskhost.exe': '任务主机', 'taskhostw.exe': '任务主机',
+    'svchost.exe': '服务主机',
+    'rundll32.exe': 'DLL 宿主',
+    'dllhost.exe': 'COM 代理',
+    'runtimebroker.exe': '运行时代理',
+    'consent.exe': 'UAC 提示',
+    'userinit.exe': '用户初始化',
+    'wsappx.exe': '应用商店服务',
+    'crashpad_handler.exe': '崩溃报告',
+    'updater.exe': '更新程序',
+    'securityhealthsystray.exe': 'Windows 安全中心',
+    'securityhealthservice.exe': 'Windows 安全服务',
+    'mpdefendercoreservice.exe': 'Defender 核心',
+    'msedgewebview2.exe': 'Edge WebView',
+    # ── 中文友好名：常见三方工具 ──
+    'shellhost.exe': 'Shell 宿主',
+    'sogoucloud.exe': '搜狗输入法', 'sogouinput.exe': '搜狗输入法', 'sgtool.exe': '搜狗工具',
+    'qqpinyin.exe': 'QQ 拼音',
+    'wubi.exe': '五笔输入法',
+    'snipaste.exe': 'Snipaste 截图',
+    'screentogif.exe': 'ScreenToGif',
+    'clash-verge.exe': 'Clash Verge', 'clash for windows.exe': 'Clash',
+    'nvidia overlay.exe': 'NVIDIA 覆盖层', 'nvidia share.exe': 'NVIDIA 分享',
+    'nvcontainer.exe': 'NVIDIA 容器',
+    'wechatmgr.exe': '微信管理', 'weixin.exe': '微信',
+    'wmplayer.exe': 'Windows Media Player',
+}
+
+# ───────────────────────────────────────────────────────────────
+#  内置分类规则（v3：用户校准后定稿）
+#  四档：focus(专注) / distracted(走神) / neutral(中性，不计) / unknown(待分类)
+#  优先级：用户自定义规则 > 内置规则 > unknown 兜底
+#  浏览器内未识别站点 → unknown（让用户主动拨）
+# ───────────────────────────────────────────────────────────────
+_BUILTIN_FOCUS_PROCS = {
+    # Office
+    'winword.exe', 'excel.exe', 'powerpnt.exe', 'onenote.exe', 'visio.exe', 'mspub.exe',
+    'wps.exe', 'wpsoffice.exe', 'et.exe', 'wpp.exe',
+    # IDE / 编辑器
+    'code.exe', 'cursor.exe', 'devenv.exe',
+    'pycharm64.exe', 'pycharm.exe',
+    'idea64.exe', 'idea.exe',
+    'webstorm64.exe', 'webstorm.exe',
+    'goland64.exe', 'goland.exe',
+    'clion64.exe', 'clion.exe',
+    'rider64.exe', 'rider.exe',
+    'phpstorm64.exe', 'phpstorm.exe',
+    'datagrip64.exe', 'datagrip.exe',
+    'rubymine64.exe', 'rubymine.exe',
+    'studio64.exe', 'android studio.exe',
+    'sublime_text.exe', 'notepad++.exe', 'atom.exe',
+    # 终端
+    'windowsterminal.exe', 'wt.exe',
+    'cmd.exe', 'powershell.exe', 'pwsh.exe',
+    'conemu64.exe', 'conemu.exe',
+    'xshell.exe', 'mobaxterm.exe', 'putty.exe',
+    'tabby.exe', 'alacritty.exe', 'wezterm.exe',
+    # Python / 解释器
+    'python.exe', 'python3.exe', 'pythonw.exe', 'py.exe',
+    'ipython.exe', 'jupyter.exe', 'jupyter-notebook.exe',
+    # Git / VCS
+    'git.exe', 'githubdesktop.exe', 'sourcetree.exe',
+    'tortoisegit.exe', 'tortoisegitproc.exe', 'tortoisegitmerge.exe',
+    'gitkraken.exe', 'fork.exe', 'smartgit.exe',
+    # PDF / 文档阅读
+    'sumatrapdf.exe', 'acrord32.exe', 'acrobat.exe', 'foxitreader.exe',
+    # 笔记/写作
+    'obsidian.exe', 'typora.exe', 'notion.exe',
+}
+
+_BUILTIN_DISTRACTED_PROCS = {
+    # 视频播放器
+    'potplayermini64.exe', 'potplayer.exe', 'mpc-hc64.exe', 'mpc-hc.exe',
+    'mpv.exe', 'mpvnet.exe', 'vlc.exe', 'kmplayer.exe', 'gomplayer.exe',
+    # 游戏平台 / 启动器
+    'steam.exe', 'steamwebhelper.exe',
+    'epicgameslauncher.exe', 'epicwebhelper.exe',
+    'wegame.exe', 'tencentdl.exe',
+    'battle.net.exe', 'battlenet.exe', 'agent.exe',
+    'origin.exe', 'eadesktop.exe',
+    'galaxyclient.exe', 'gog galaxy.exe',
+    'uplay.exe', 'upc.exe',
+    'minecraftlauncher.exe',
+    # IM（除微信/QQ 外）
+    'telegram.exe', 'telegramdesktop.exe',
+    'discord.exe', 'discordcanary.exe',
+    'whatsapp.exe',
+    'slack.exe',
+    'dingtalk.exe',
+    'lark.exe', 'feishu.exe',
+}
+
+_BUILTIN_NEUTRAL_PROCS = {
+    # 微信 / QQ
+    'wechat.exe', 'weixin.exe', 'wechatappex.exe',
+    'qq.exe', 'tim.exe', 'qqim.exe',
+    # 音乐播放器
+    'spotify.exe',
+    'cloudmusic.exe', 'neteasemusic.exe',
+    'qqmusic.exe',
+    'applemusic.exe', 'amperity.exe',
+    'foobar2000.exe',
+    # 系统辅助 / 难分类工具（不计入专注/走神）
+    'shellhost.exe',
+    'nvidia overlay.exe', 'nvidia share.exe',
+    'nvidia geforce experience.exe', 'nvcontainer.exe',
+    'clash-verge.exe', 'clash for windows.exe', 'clashx.exe',
+    'v2rayn.exe', 'v2rayng.exe', 'qv2ray.exe',
+    'snipaste.exe', 'snippingtool.exe', 'screentogif.exe',
+    'calculator.exe', 'calc.exe',
+    'mspaint.exe',
+    'wechatmgr.exe', 'wmplayer.exe',
+    # ── Windows 系统进程 / 设置 / 框架 ──
+    'systemsettings.exe',           # 设置
+    'applicationframehost.exe',     # UWP 容器
+    'textinputhost.exe',            # 输入法/搜索
+    'searchapp.exe', 'searchhost.exe', 'searchui.exe',
+    'startmenuexperiencehost.exe',  # 开始菜单
+    'lockapp.exe',                  # 锁屏
+    'shellexperiencehost.exe',      # Shell 容器
+    'explorer.exe',                 # 资源管理器（不能简单归 focus 或 distracted）
+    'taskmgr.exe',                  # 任务管理器
+    'controlcenter.exe', 'control.exe',  # 控制面板
+    'msinfo32.exe', 'mmc.exe',
+    'regedit.exe',
+    'cmd.exe',                      # 单纯 cmd 不算 focus（终端 IDE 已在 focus）
+    'sihost.exe',                   # Shell Infrastructure Host
+    'fontview.exe', 'fontdrvhost.exe',
+    'dwm.exe',                      # 桌面窗口管理
+    'csrss.exe', 'winlogon.exe',
+    # 输入法
+    'sogoucloud.exe', 'sogouinput.exe', 'sgtool.exe',
+    'qqpinyin.exe',
+    'wubi.exe',
+    'tabtip.exe', 'inputexperience.exe',
+    # 通知/工具
+    'notepad.exe', 'wordpad.exe',
+    'magnify.exe',                  # 放大镜
+    'osk.exe',                      # 屏幕键盘
+    'narrator.exe',                 # 讲述人
+    'stikynot.exe',                 # 便笺
+    # 截图/录屏
+    'gamebar.exe', 'gamebarpresencewriter.exe',
+    'shareex.exe',
+    # 其他常见后台
+    'msedgewebview2.exe',           # WebView2（VSCode 等用到）
+    'crashpad_handler.exe',
+    'updater.exe',
+    'securityhealthsystray.exe', 'securityhealthservice.exe',
+    'mpdefendercoreservice.exe',
+    'wsappx.exe',
+    'runtimebroker.exe',
+    'consent.exe',
+    'userinit.exe',
+    'rundll32.exe',
+    'dllhost.exe',
+    'svchost.exe',
+    'taskhost.exe', 'taskhostw.exe',
+}
+
+# 浏览器内白名单：域名命中 → focus；其他全部 → unknown（让用户拨）
+_BUILTIN_FOCUS_SITES = {
+    'cnki.net', 'cnki.com.cn',
+    'pkulaw.com', 'pkulaw.cn',
+    'docs.google.com', 'sheets.google.com', 'slides.google.com',
+    'gemini.google.com',
+    'chat.openai.com', 'chatgpt.com',
+    'claude.ai', 'anthropic.com',
+    'github.com',
+}
+
+# 内置走神站点（视频 / 短视频 / 社交娱乐）
+_BUILTIN_DISTRACTED_SITES = {
+    'bilibili.com', 'b23.tv',
+    'youtube.com', 'youtu.be',
+    'douyin.com', 'tiktok.com',
+    'kuaishou.com',
+    'weibo.com', 'weibo.cn',
+    'twitter.com', 'x.com',
+    'reddit.com',
+    'instagram.com',
+    'twitch.tv',
+    'iqiyi.com', 'youku.com', 'mgtv.com', 'qq.com/v',
+    'huya.com', 'douyu.com',
+    'xiaohongshu.com', 'xhs.com',
+    'pinduoduo.com', 'taobao.com', 'tmall.com', 'jd.com',
+}
+
+# 内置中性站点（搜索 / 工具 / 通用）
+_BUILTIN_NEUTRAL_SITES = {
+    'baidu.com', 'google.com', 'google.com.hk', 'bing.com', 'duckduckgo.com',
+    'mail.qq.com', 'mail.163.com', 'mail.google.com', 'outlook.com',
+    'zhihu.com',
+    'translate.google.com',
+}
+
+# 标题关键词兜底（域名解析失败时使用）
+_BUILTIN_FOCUS_TITLE_KW = (
+    '中国知网', '北大法宝', '法律法规数据库',
+    'chatgpt', 'claude.ai', 'gemini',
+    'google 文档', 'google 表格', 'google 幻灯片',
+    'google docs', 'google sheets', 'google slides',
+    'github',
+)
+
+# 网站域名 → 友好显示名（取标题中 URL 或末尾域名）
+_SITE_MAP = {
+    'bilibili.com': '哔哩哔哩', 'b23.tv': '哔哩哔哩',
+    'youtube.com': 'YouTube', 'youtu.be': 'YouTube',
+    'github.com': 'GitHub',
+    'stackoverflow.com': 'Stack Overflow',
+    'google.com': '谷歌', 'google.com.hk': '谷歌',
+    'baidu.com': '百度', 'zhihu.com': '知乎',
+    'weibo.com': '微博', 'weibo.cn': '微博',
+    'douyin.com': '抖音', 'tiktok.com': 'TikTok',
+    'twitter.com': '推特', 'x.com': '推特 (X)',
+    'reddit.com': 'Reddit',
+    'notion.so': 'Notion',
+    'figma.com': 'Figma',
+    'chatgpt.com': 'ChatGPT', 'openai.com': 'OpenAI',
+    'claude.ai': 'Claude',
+    'gemini.google.com': 'Gemini',
+    'kimi.moonshot.cn': 'Kimi',
+    'deepseek.com': 'DeepSeek',
+    'doubao.com': '豆包',
+    'tongyi.aliyun.com': '通义千问',
+    'leetcode.com': '力扣', 'leetcode.cn': '力扣',
+    'csdn.net': 'CSDN',
+    'juejin.cn': '掘金',
+    'jianshu.com': '简书',
+    'taobao.com': '淘宝', 'tmall.com': '天猫',
+    'jd.com': '京东',
+    'pinduoduo.com': '拼多多',
+    'xiaohongshu.com': '小红书',
+    'mail.qq.com': 'QQ 邮箱', 'mail.163.com': '网易邮箱',
+    'outlook.live.com': 'Outlook', 'mail.google.com': 'Gmail',
+    'outlook.com': 'Outlook',
+    'bing.com': '必应',
+    'npmjs.com': 'npm',
+    'pypi.org': 'PyPI',
+    'mdn.mozilla.org': 'MDN', 'developer.mozilla.org': 'MDN',
+    'netflix.com': 'Netflix',
+    'iqiyi.com': '爱奇艺', 'v.qq.com': '腾讯视频', 'youku.com': '优酷', 'mgtv.com': '芒果 TV',
+    'twitch.tv': 'Twitch',
+    'huya.com': '虎牙', 'douyu.com': '斗鱼',
+    'wsj.com': '华尔街日报',
+    'nytimes.com': '纽约时报',
+    'wikipedia.org': '维基百科',
+    'cnki.net': '中国知网',
+    'pkulaw.com': '北大法宝',
+    'microsoft.com': '微软',
+    'docs.google.com': 'Google 文档',
+    'sheets.google.com': 'Google 表格',
+    'slides.google.com': 'Google 幻灯片',
+    'translate.google.com': '谷歌翻译',
+}
+
+_DOMAIN_RE = re.compile(
+    r'(?:https?://)?((?:[a-zA-Z0-9][a-zA-Z0-9\-]*\.)+'
+    r'(?:com|cn|org|net|io|co|edu|gov|app|dev|ai|tv|me|cc|so|info|xyz|site|top|vip|tech|icu|fun|ltd|work'
+    r'|jp|uk|de|fr|ru|in|hk|tw|sg|kr|au|ca|us|nl|it|es|br|mx|pl|se|no|dk|fi|cz|pt|gr|tr|il|th|vn|id|my|ph)'
+    r'(?:\.[a-zA-Z]{2})?)',
+    re.IGNORECASE
+)
+
+
+def _extract_domain(title: str) -> str:
+    """从浏览器标题中提取最后一个可识别的域名（小写，去端口）。
+    若标题中无 URL，则用品牌词/中文别名兜底匹配 _SITE_ALIAS。
+    找不到返回空串。"""
+    if not title:
+        return ''
+    matches = _DOMAIN_RE.findall(title)
+    if matches:
+        dom = matches[-1].lower().strip()
+        parts = dom.split('.')
+        if len(parts) > 2:
+            if dom in _SITE_MAP:
+                return dom
+            last_two = '.'.join(parts[-2:])
+            if parts[-2] in ('com', 'co', 'gov', 'org', 'edu', 'net') and len(parts[-1]) == 2:
+                return '.'.join(parts[-3:]) if len(parts) >= 3 else dom
+            return last_two
+        return dom
+    # —— 兜底：品牌词/中文别名 → 域名 ——
+    t_lower = title.lower()
+    for alias, dom in _SITE_ALIAS:
+        if alias in t_lower:
+            return dom
+    return ''
+
+
+# 品牌词 / 中文名 → 域名（按出现频率排序，先匹配先返回）
+_SITE_ALIAS = [
+    ('哔哩哔哩', 'bilibili.com'), ('bilibili', 'bilibili.com'),
+    ('youtube', 'youtube.com'), ('youtu.be', 'youtu.be'),
+    ('华尔街日报', 'wsj.com'), ('wsj', 'wsj.com'),
+    ('紐約時報', 'nytimes.com'), ('纽约时报', 'nytimes.com'), ('nytimes', 'nytimes.com'),
+    ('维基百科', 'wikipedia.org'), ('wikipedia', 'wikipedia.org'),
+    ('中国知网', 'cnki.net'), ('知网', 'cnki.net'),
+    ('北大法宝', 'pkulaw.com'), ('法律法规数据库', 'pkulaw.com'),
+    ('豆包', 'doubao.com'),
+    ('m365 copilot', 'microsoft.com'), ('microsoft 365', 'microsoft.com'),
+    ('google 文档', 'docs.google.com'), ('google docs', 'docs.google.com'),
+    ('google 表格', 'sheets.google.com'), ('google sheets', 'sheets.google.com'),
+    ('google 幻灯片', 'slides.google.com'), ('google slides', 'slides.google.com'),
+    ('gemini', 'gemini.google.com'),
+    ('chatgpt', 'chatgpt.com'),
+    ('claude', 'claude.ai'),
+    ('github', 'github.com'),
+    ('zhihu', 'zhihu.com'), ('知乎', 'zhihu.com'),
+    ('微博', 'weibo.com'),
+    ('抖音', 'douyin.com'), ('tiktok', 'tiktok.com'),
+    ('小红书', 'xiaohongshu.com'),
+    ('淘宝', 'taobao.com'), ('天猫', 'tmall.com'),
+    ('京东', 'jd.com'),
+    ('拼多多', 'pinduoduo.com'),
+    ('百度', 'baidu.com'),
+    ('bing', 'bing.com'),
+    ('qq 邮箱', 'mail.qq.com'),
+    ('outlook', 'outlook.com'),
+    ('twitch', 'twitch.tv'),
+    ('reddit', 'reddit.com'),
+    ('twitter', 'twitter.com'),
+    ('爱奇艺', 'iqiyi.com'),
+    ('优酷', 'youku.com'),
+    ('芒果tv', 'mgtv.com'),
+    ('虎牙', 'huya.com'),
+    ('斗鱼', 'douyu.com'),
+]
+
+
+def normalize_window(proc_name: str, title: str):
+    """窗口归一化：返回 (display_name, category, should_ignore)
+
+    - 系统噪音窗口 → should_ignore=True
+    - 浏览器 → 提取域名合并（Bilibili/YouTube 等）
+    - 其他应用 → 查 _APP_NAME_MAP，否则用 exe 文件名去后缀
+    """
+    p = (proc_name or '').lower().strip()
+    t = (title or '').strip()
+
+    # 1. 完全忽略的壳进程
+    if p in _IGNORE_PROCS:
+        return (None, 'ignored', True)
+
+    # 2. 标题噪音
+    t_lower = t.lower()
+    for pat in _IGNORE_TITLE_PATTERNS:
+        if pat in t_lower:
+            return (None, 'ignored', True)
+    if not t:
+        return (None, 'ignored', True)
+
+    # 3. 浏览器 → 站点合并
+    if p in _BROWSER_PROCS:
+        dom = _extract_domain(t)
+        if dom:
+            display = _SITE_MAP.get(dom) or dom
+            return (display, 'browser', False)
+        # 无法提取域名 → 按浏览器本身归类
+        browser_name = _APP_NAME_MAP.get(p, p.replace('.exe', '').title())
+        return (browser_name, 'browser', False)
+
+    # 4. 其他应用
+    if p in _APP_NAME_MAP:
+        return (_APP_NAME_MAP[p], 'app', False)
+    # 兜底：文件名去 .exe 首字母大写
+    fallback = re.sub(r'\.exe$', '', p, flags=re.IGNORECASE)
+    if not fallback:
+        return (None, 'ignored', True)
+    return (fallback.title() if fallback.isascii() else fallback, 'app', False)
+
+
 _user32 = ctypes.WinDLL('user32', use_last_error=True) if sys.platform == 'win32' else None
 _WinEventProc = ctypes.WINFUNCTYPE(
     None, _wt.HANDLE, _wt.DWORD, _wt.HWND,
@@ -3475,32 +4188,35 @@ class WindowActivityDB:
                 CREATE TABLE IF NOT EXISTS keywords (
                     id          INTEGER PRIMARY KEY AUTOINCREMENT,
                     keyword     TEXT    NOT NULL,
-                    list_type   TEXT    NOT NULL CHECK(list_type IN ('white','black')),
+                    list_type   TEXT    NOT NULL,
                     proc_pattern TEXT   DEFAULT NULL,
                     UNIQUE(keyword, list_type)
                 );
                 CREATE INDEX IF NOT EXISTS idx_activity_date
                     ON activity_records(date_key);
+                CREATE TABLE IF NOT EXISTS schema_meta (k TEXT PRIMARY KEY, v TEXT);
             """)
             # Schema migration: add rule_type column if missing
             try:
                 c.execute("ALTER TABLE keywords ADD COLUMN rule_type TEXT NOT NULL DEFAULT 'title'")
             except Exception:
-                pass  # column already exists
-            defaults = [
-                ('代码', 'white', None, 'title'), ('code', 'white', None, 'title'),
-                ('文档', 'white', None, 'title'), ('设计', 'white', None, 'title'),
-                ('会议', 'white', None, 'title'), ('学习', 'white', None, 'title'),
-                ('winword', 'white', None, 'proc'), ('excel', 'white', None, 'proc'),
-                ('powerpnt', 'white', None, 'proc'), ('code', 'white', 'Code.exe', 'proc'),
-                ('微信', 'black', 'WeChat.exe', 'proc'), ('游戏', 'black', None, 'title'),
-                ('抖音', 'black', None, 'title'), ('bilibili', 'black', None, 'title'),
-                ('YouTube', 'black', None, 'title'), ('娱乐', 'black', None, 'title'),
-            ]
-            c.executemany(
-                "INSERT OR IGNORE INTO keywords(keyword,list_type,proc_pattern,rule_type) VALUES(?,?,?,?)",
-                defaults
-            )
+                pass
+            # ── v3 → v4 迁移：清旧默认 + 重建 keywords 表去掉 CHECK 限制（支持 'neutral'）──
+            v4 = c.execute("SELECT v FROM schema_meta WHERE k='v4_keyword_neutral'").fetchone()
+            if not v4:
+                # 重建表：旧表可能有 CHECK(list_type IN ('white','black')) 约束
+                c.execute("DROP TABLE IF EXISTS keywords")
+                c.execute("""
+                    CREATE TABLE keywords (
+                        id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                        keyword      TEXT NOT NULL,
+                        list_type    TEXT NOT NULL,
+                        proc_pattern TEXT DEFAULT NULL,
+                        rule_type    TEXT NOT NULL DEFAULT 'title',
+                        UNIQUE(keyword, list_type, rule_type)
+                    )
+                """)
+                c.execute("INSERT OR REPLACE INTO schema_meta(k,v) VALUES('v4_keyword_neutral','1')")
             c.commit()
 
     def insert_record(self, proc_name, title, start_time, duration, state):
@@ -3532,11 +4248,17 @@ class WindowActivityDB:
         self._conn().commit()
 
     def get_keywords(self):
-        rows = self._conn().execute("SELECT keyword, list_type, rule_type FROM keywords").fetchall()
-        return {
-            'white': [{'keyword': r['keyword'], 'rule_type': r['rule_type'] or 'title'} for r in rows if r['list_type'] == 'white'],
-            'black': [{'keyword': r['keyword'], 'rule_type': r['rule_type'] or 'title'} for r in rows if r['list_type'] == 'black'],
-        }
+        rows = self._conn().execute("SELECT keyword, list_type, rule_type, proc_pattern FROM keywords").fetchall()
+        out = {'white': [], 'black': [], 'neutral': []}
+        for r in rows:
+            lt = r['list_type']
+            if lt in out:
+                out[lt].append({
+                    'keyword': r['keyword'],
+                    'rule_type': r['rule_type'] or 'title',
+                    'proc_pattern': r['proc_pattern'],
+                })
+        return out
 
     def get_keywords_full(self):
         rows = self._conn().execute(
@@ -3549,30 +4271,28 @@ class WindowActivityDB:
         self._conn().commit()
 
     def get_today_top10(self):
-        """今日使用前10，非浏览器按进程合并，浏览器按标题合并"""
-        from datetime import datetime as _dt
+        """今日使用前 10：按 normalize_window 统一归一化后合并"""
         dk = date.today().isoformat()
         rows = self._conn().execute("""
             SELECT proc_name, title, duration, state
               FROM activity_records
              WHERE date_key = ?
         """, (dk,)).fetchall()
+
         agg = {}
         for row in rows:
-            proc = row['proc_name']
-            title = row['title'] or ''
-            is_browser = proc.lower() in {b.lower() for b in _BROWSER_PROCS}
-            if is_browser:
-                key = title.strip()
-            else:
-                key = re.sub(r'\.exe$', '', proc, flags=re.IGNORECASE).strip()
-            if not key:
+            display, category, ignore = normalize_window(row['proc_name'], row['title'] or '')
+            if ignore or not display:
                 continue
-            if key not in agg:
-                agg[key] = {'total': 0, 'focus': 0, 'distracted': 0, 'unknown': 0, 'is_browser': is_browser}
-            agg[key]['total'] += row['duration']
+            if display not in agg:
+                agg[display] = {
+                    'total': 0, 'focus': 0, 'distracted': 0, 'unknown': 0,
+                    'is_browser': (category == 'browser'),
+                    'category': category,
+                }
+            agg[display]['total'] += row['duration']
             st = row['state'] if row['state'] in ('focus', 'distracted', 'unknown') else 'unknown'
-            agg[key][st] = agg[key].get(st, 0) + row['duration']
+            agg[display][st] = agg[display].get(st, 0) + row['duration']
         sorted_items = sorted(agg.items(), key=lambda x: x[1]['total'], reverse=True)[:10]
         return [{'name': k, **v} for k, v in sorted_items]
 
@@ -3612,7 +4332,16 @@ class WindowActivityDB:
              ORDER BY start_time DESC
              LIMIT ?
         """, (dk, limit)).fetchall()
-        return [dict(r) for r in rows]
+        out = []
+        for r in rows:
+            d = dict(r)
+            display, category, ignore = normalize_window(d['proc_name'], d['title'] or '')
+            if ignore:
+                continue  # 历史记录里若残留噪音窗口，也在展示时过滤
+            d['display_name'] = display
+            d['category'] = category
+            out.append(d)
+        return out
 
     def get_today_summary(self):
         dk = date.today().isoformat()
@@ -3648,47 +4377,364 @@ class WindowActivityDB:
         ).fetchone()
         return dict(row) if row else None
 
+    # ── v3 新增：按 display 聚合 + 三色统计 ──────────────────────
+
+    def _today_rows(self):
+        dk = date.today().isoformat()
+        return self._conn().execute("""
+            SELECT proc_name, title, duration
+              FROM activity_records
+             WHERE date_key = ?
+        """, (dk,)).fetchall()
+
+    def _aggregate_by_display(self, classifier=None):
+        """把今日记录按 (display, proc_low) 聚合，state 用当前 classifier 实时判定。
+        返回 [{display, proc_raw, category, state, total, sample_titles, ids}]
+        """
+        agg = {}
+        for row in self._today_rows():
+            display, category, ignore = normalize_window(row['proc_name'], row['title'] or '')
+            if ignore or not display:
+                continue
+            state = classifier.classify(row['proc_name'], row['title'] or '') if classifier else 'unknown'
+            key = (display, category)
+            if key not in agg:
+                agg[key] = {
+                    'display': display,
+                    'proc_raw': row['proc_name'],
+                    'category': category,
+                    'state': state,
+                    'total': 0.0,
+                    'titles': {},
+                }
+            # 同 display 下若不同记录被判到不同 state，取「focus 优先 > distracted > neutral > unknown」
+            order = {'focus': 0, 'distracted': 1, 'neutral': 2, 'unknown': 3}
+            if order.get(state, 9) < order.get(agg[key]['state'], 9):
+                agg[key]['state'] = state
+            agg[key]['total'] += row['duration']
+            tt = (row['title'] or '').strip()
+            if tt:
+                agg[key]['titles'][tt] = agg[key]['titles'].get(tt, 0) + row['duration']
+        # 摊平 titles → top 5
+        out = []
+        for v in agg.values():
+            top_titles = sorted(v['titles'].items(), key=lambda x: x[1], reverse=True)[:5]
+            v['sample_titles'] = [{'title': t, 'sec': round(s)} for t, s in top_titles]
+            del v['titles']
+            v['total'] = round(v['total'])
+            out.append(v)
+        return out
+
+    def get_stats_today(self, classifier):
+        """三色统计：focus / distracted / neutral / unknown 总秒数"""
+        items = self._aggregate_by_display(classifier)
+        bucket = {'focus': 0, 'distracted': 0, 'neutral': 0, 'unknown': 0}
+        for it in items:
+            bucket[it['state']] = bucket.get(it['state'], 0) + it['total']
+        bucket['total'] = sum(bucket.values())
+        return bucket
+
+    def get_top_by_state(self, classifier, state, limit=5):
+        items = [x for x in self._aggregate_by_display(classifier) if x['state'] == state]
+        items.sort(key=lambda x: x['total'], reverse=True)
+        return items[:limit]
+
+    def get_pending_displays(self, classifier, limit=20):
+        """待分类（unknown）的 display 聚合列表"""
+        items = [x for x in self._aggregate_by_display(classifier) if x['state'] == 'unknown']
+        items.sort(key=lambda x: x['total'], reverse=True)
+        return items[:limit]
+
+    def get_top_all(self, classifier, limit=10):
+        items = self._aggregate_by_display(classifier)
+        items.sort(key=lambda x: x['total'], reverse=True)
+        return items[:limit]
+
+    def classify_display(self, proc_raw, display, state, kind=None):
+        """用户对某 display 拨档：写入 keywords 规则
+        - kind='site' → 强制写为 title 规则（标题包含匹配）
+        - kind='proc' → 强制写为 proc 规则
+        - kind=None  → 按 proc_raw 是否为浏览器自动判断（兼容旧调用）
+        """
+        proc_low = (proc_raw or '').lower()
+        if kind is None:
+            is_browser = proc_low in {b.lower() for b in _BROWSER_PROCS}
+            kind = 'site' if is_browser else 'proc'
+        kw = (display or '').strip()
+        if not kw:
+            return False
+        if state == 'reset':
+            self._conn().execute(
+                "DELETE FROM keywords WHERE LOWER(keyword)=LOWER(?) OR LOWER(keyword)=LOWER(?)",
+                (kw, proc_low.replace('.exe', ''))
+            )
+            self._conn().commit()
+            return True
+        if state not in ('focus', 'distracted', 'neutral'):
+            return False
+        list_type = {'focus': 'white', 'distracted': 'black', 'neutral': 'neutral'}[state]
+        if kind == 'site':
+            self._conn().execute(
+                "DELETE FROM keywords WHERE LOWER(keyword)=LOWER(?) AND rule_type='title'",
+                (kw,)
+            )
+            self.add_keyword(kw, list_type, '__browser__', 'title')
+        else:
+            base = (proc_low or kw.lower()).replace('.exe', '')
+            self._conn().execute(
+                "DELETE FROM keywords WHERE LOWER(keyword)=LOWER(?) AND rule_type='proc'",
+                (base,)
+            )
+            self.add_keyword(base, list_type, proc_raw or (base + '.exe'), 'proc')
+        self._conn().commit()
+        return True
+
+    # ── v4：返回所有规则（内置 + 用户），供 UI 展示拨档 ──
+
+    def get_all_rules(self, today_only=False):
+        """返回 {procs:[...], sites:[...]}
+        - today_only=True 时仅返回今日出现过的程序/站点（含未识别站点的 display）
+        - 总是收集 today_sites 用于补全今日访问过但未分类的域名
+        """
+        # 今日出现过的 proc/key 集合（用于过滤 + 补全 unknown 域名）
+        today_procs = set()
+        today_sites = set()
+        for row in self._today_rows():
+            p = (row['proc_name'] or '').lower()
+            if p:
+                today_procs.add(p)
+                today_procs.add(p.replace('.exe', ''))
+            # 浏览器记录中提取域名
+            if p in {b.lower() for b in _BROWSER_PROCS}:
+                dom = _extract_domain(row['title'] or '')
+                if dom:
+                    today_sites.add(dom)
+                    # 同时把所有内置站点中能匹配到的也加进去
+                    for site in (_BUILTIN_FOCUS_SITES | _BUILTIN_DISTRACTED_SITES | _BUILTIN_NEUTRAL_SITES):
+                        if dom == site or dom.endswith('.' + site):
+                            today_sites.add(site)
+        # 用户覆盖（key → state）
+        user_proc_state = {}
+        user_site_state = {}
+        for lt, st in (('white', 'focus'), ('black', 'distracted'), ('neutral', 'neutral')):
+            rows = self._conn().execute(
+                "SELECT keyword, rule_type, proc_pattern FROM keywords WHERE list_type=?", (lt,)
+            ).fetchall()
+            for r in rows:
+                k = (r['keyword'] or '').lower()
+                if not k:
+                    continue
+                if r['rule_type'] == 'proc':
+                    user_proc_state[k] = st
+                else:
+                    user_site_state[k] = st
+
+        procs = []
+        seen = set()
+        # 内置规则
+        for src_set, builtin_state in (
+            (_BUILTIN_FOCUS_PROCS, 'focus'),
+            (_BUILTIN_DISTRACTED_PROCS, 'distracted'),
+            (_BUILTIN_NEUTRAL_PROCS, 'neutral'),
+        ):
+            for exe in src_set:
+                base = exe.replace('.exe', '')
+                user_st = user_proc_state.get(base) or user_proc_state.get(exe)
+                state = user_st or builtin_state
+                source = 'user' if user_st else 'builtin'
+                display = _APP_NAME_MAP.get(exe, base.title() if base.isascii() else base)
+                key = exe
+                if key in seen:
+                    continue
+                seen.add(key)
+                procs.append({
+                    'key': base, 'exe': exe, 'display': display,
+                    'state': state, 'source': source,
+                    'builtin_state': builtin_state,
+                })
+        # 用户额外加的规则（不在内置里）
+        for k, st in user_proc_state.items():
+            if any(p['key'] == k or p['exe'].replace('.exe','') == k for p in procs):
+                continue
+            procs.append({
+                'key': k, 'exe': k + '.exe',
+                'display': _APP_NAME_MAP.get(k + '.exe', k.title()),
+                'state': st, 'source': 'user', 'builtin_state': None,
+            })
+        # 今日出现过的程序中，不在任何规则里的 → unknown（让用户拨档）
+        all_builtin_procs = (_BUILTIN_FOCUS_PROCS | _BUILTIN_DISTRACTED_PROCS | _BUILTIN_NEUTRAL_PROCS)
+        already_keys = {p['key'].lower() for p in procs} | {p['exe'].lower() for p in procs}
+        # 浏览器进程不算（它们的"应用"含义在站点列表里体现）
+        browser_set = {b.lower() for b in _BROWSER_PROCS}
+        for tp in today_procs:
+            if not tp or tp in already_keys:
+                continue
+            tp_exe = tp if tp.endswith('.exe') else (tp + '.exe')
+            if tp in browser_set or tp_exe in browser_set:
+                continue
+            # 跳过已被内置规则覆盖的（即使大小写不同）
+            if tp in all_builtin_procs or tp_exe in all_builtin_procs:
+                continue
+            base = tp.replace('.exe', '')
+            exe = tp_exe
+            display = _APP_NAME_MAP.get(exe, base.title() if base.isascii() else base)
+            procs.append({
+                'key': base, 'exe': exe, 'display': display,
+                'state': 'unknown', 'source': 'builtin', 'builtin_state': None,
+            })
+            already_keys.add(base); already_keys.add(exe)
+        # 排序：unknown → focus → distracted → neutral
+        order = {'unknown': -1, 'focus': 0, 'distracted': 1, 'neutral': 2}
+        procs.sort(key=lambda x: (order.get(x['state'], 9), x['display'].lower()))
+
+        # today_only 过滤（保留所有用户自定义；内置只保留今日出现的）
+        if today_only:
+            procs = [p for p in procs
+                     if p['source'] == 'user'
+                     or p['key'].lower() in today_procs
+                     or p['exe'].lower() in today_procs]
+
+        # 站点
+        sites = []
+        seen_s = set()
+        all_builtin_sites = (_BUILTIN_FOCUS_SITES | _BUILTIN_DISTRACTED_SITES | _BUILTIN_NEUTRAL_SITES)
+        for src_set, builtin_state in (
+            (_BUILTIN_FOCUS_SITES, 'focus'),
+            (_BUILTIN_DISTRACTED_SITES, 'distracted'),
+            (_BUILTIN_NEUTRAL_SITES, 'neutral'),
+        ):
+            for s in src_set:
+                if s in seen_s:
+                    continue
+                user_st = user_site_state.get(s)
+                sites.append({
+                    'key': s, 'display': _SITE_MAP.get(s, s),
+                    'state': user_st or builtin_state,
+                    'source': 'user' if user_st else 'builtin',
+                    'builtin_state': builtin_state,
+                })
+                seen_s.add(s)
+        for k, st in user_site_state.items():
+            if k in seen_s:
+                continue
+            sites.append({
+                'key': k, 'display': _SITE_MAP.get(k, k),
+                'state': st, 'source': 'user', 'builtin_state': None,
+            })
+            seen_s.add(k)
+        # 今日访问过但未分类的域名 → state=unknown，让用户拨档
+        for dom in today_sites:
+            if dom in seen_s:
+                continue
+            # 跳过已被内置规则匹配到的（subdomain）
+            matched = False
+            for s in all_builtin_sites:
+                if dom == s or dom.endswith('.' + s):
+                    matched = True
+                    break
+            if matched:
+                continue
+            sites.append({
+                'key': dom, 'display': _SITE_MAP.get(dom, dom),
+                'state': 'unknown', 'source': 'builtin', 'builtin_state': None,
+            })
+            seen_s.add(dom)
+        sites.sort(key=lambda x: (order.get(x['state'], 9), x['display'].lower()))
+        if today_only:
+            sites = [s for s in sites
+                     if s['source'] == 'user'
+                     or s['key'].lower() in today_sites]
+        return {'procs': procs, 'sites': sites}
+
 
 class WindowStateClassifier:
-    """根据白/黑名单和超时阈值判定窗口状态"""
+    """根据内置规则 + 用户自定义关键词判定窗口状态
 
-    DISTRACTION_TIMEOUT = 120  # 停留超过 2 分钟且未匹配规则视为走神
+    返回值: 'focus' | 'distracted' | 'neutral' | 'unknown'
+    优先级: 用户自定义规则 > 内置应用/站点规则 > unknown
+    （已废弃 BLACKLIST_GRACE / DISTRACTION_TIMEOUT —— 分类只取决于内容本身）
+    """
+
+    # 兼容旧字段（其他代码可能引用，但逻辑不再使用）
+    DISTRACTION_TIMEOUT = 0
+    BLACKLIST_GRACE = 0
 
     def __init__(self, db: WindowActivityDB):
         self._db = db
+        self._force_kws: set = set()  # 兼容旧 API（已不再用于宽容期判定）
+
+    def add_force_kw(self, keyword: str):
+        self._force_kws.add(keyword.lower())
 
     def classify(self, proc_name, title, stay_seconds=0):
-        """返回 'focus' | 'distracted' | 'unknown'"""
-        kw = self._db.get_keywords()
-        proc_lower = proc_name.lower()
-        title_lower = title.lower()
-        combined = f"{proc_lower} {title_lower}"
-        is_browser = proc_lower in {b.lower() for b in _BROWSER_PROCS}
-        for item in kw['white']:
-            w = item['keyword'].lower()
-            if item['rule_type'] == 'proc':
-                if w in proc_lower:
-                    return 'focus'
-            else:  # title rule
-                pp = (item.get('proc_pattern') or '').lower()
-                if pp == '__browser__' and not is_browser:
-                    continue
-                if w in combined:
-                    return 'focus'
-        for item in kw['black']:
-            b = item['keyword'].lower()
-            if item['rule_type'] == 'proc':
-                if b in proc_lower:
-                    return 'distracted'
+        p = (proc_name or '').lower()
+        t = (title or '')
+        t_lower = t.lower()
+        is_browser = p in {b.lower() for b in _BROWSER_PROCS}
+
+        # ── 1. 用户自定义规则（最高优先级）── 顺序: neutral > black > white
+        # 这样可以让用户把内置 distracted 的应用强制改为 neutral
+        try:
+            kw = self._db.get_keywords()
+        except Exception:
+            kw = {'white': [], 'black': [], 'neutral': []}
+
+        def _match(item):
+            w = (item.get('keyword') or '').lower()
+            if not w:
+                return False
+            rt = item.get('rule_type', 'title')
+            if rt == 'proc':
+                return w == p or w == p.replace('.exe', '') or w in p
             else:
-                pp = (item.get('proc_pattern') or '').lower()
-                if pp == '__browser__' and not is_browser:
-                    continue
-                if b in combined:
-                    return 'distracted'
-        if stay_seconds >= self.DISTRACTION_TIMEOUT:
+                if (item.get('proc_pattern') or '').lower() == '__browser__' and not is_browser:
+                    return False
+                return w in t_lower
+
+        for item in kw.get('neutral', []):
+            if _match(item):
+                return 'neutral'
+        for item in kw.get('black', []):
+            if _match(item):
+                return 'distracted'
+        for item in kw.get('white', []):
+            if _match(item):
+                return 'focus'
+
+        # ── 2. 浏览器：按域名 / 标题关键词 ──
+        if is_browser:
+            dom = _extract_domain(t)
+            def _site_hit(dom_val, sites):
+                if not dom_val:
+                    return False
+                if dom_val in sites:
+                    return True
+                for s in sites:
+                    if dom_val == s or dom_val.endswith('.' + s):
+                        return True
+                return False
+            if _site_hit(dom, _BUILTIN_FOCUS_SITES):
+                return 'focus'
+            if _site_hit(dom, _BUILTIN_DISTRACTED_SITES):
+                return 'distracted'
+            if _site_hit(dom, _BUILTIN_NEUTRAL_SITES):
+                return 'neutral'
+            for kw_focus in _BUILTIN_FOCUS_TITLE_KW:
+                if kw_focus in t_lower:
+                    return 'focus'
+            return 'unknown'
+
+        # ── 3. 内置应用规则 ──
+        if p in _BUILTIN_FOCUS_PROCS:
+            return 'focus'
+        if p in _BUILTIN_DISTRACTED_PROCS:
             return 'distracted'
+        if p in _BUILTIN_NEUTRAL_PROCS:
+            return 'neutral'
+
+        # ── 4. 兜底：unknown ──
         return 'unknown'
+
 
 
 class WinActivityState:
@@ -3698,6 +4744,8 @@ class WinActivityState:
         self.lock = threading.Lock()
         self.proc = ''
         self.title = ''
+        self.display = ''        # 归一化后的显示名
+        self.category = 'app'    # app | browser | ignored
         self.state = 'unknown'
         self.start_time = time.time()
         self.current_record_id = None
@@ -3708,7 +4756,9 @@ class WinActivityState:
             stay = int(time.time() - self.start_time) if self.title else 0
             recent = list(self._recent)
             return {
-                'proc': self.proc,
+                'proc': self.display or self.proc,  # 前端展示归一化名
+                'proc_raw': self.proc,              # 保留原始 exe 以便调试
+                'category': self.category,
                 'title': self.title,
                 'state': self.state,
                 'stay_sec': stay,
@@ -3829,35 +4879,97 @@ def _init_win_monitor():
         _win_db = WindowActivityDB()
         _win_clf = WindowStateClassifier(_win_db)
 
+        # ─────────── 详细窗口活动 JSONL 日志 ───────────
+        # 用户使用一段时间后可以把日志发回来供分析、调整分类规则。
+        # 文件按日切：window_log_YYYY-MM-DD.jsonl，每行一条 JSON。
+        # 字段：ts(开始秒) / end_ts / dur / proc_raw / title_raw / display / category /
+        #       state(focus|distracted|unknown) / event(switch|update_state)
+        _win_jsonl_lock = threading.Lock()
+        def _win_jsonl_path():
+            from datetime import date as _d
+            return get_writable_path(f"window_log_{_d.today().isoformat()}.jsonl")
+
+        def _win_jsonl_write(record):
+            try:
+                with _win_jsonl_lock:
+                    with open(_win_jsonl_path(), 'a', encoding='utf-8') as f:
+                        f.write(json.dumps(record, ensure_ascii=False) + '\n')
+            except Exception:
+                pass
+
         def on_window_change(proc_name, title):
+            # 归一化 + 噪音过滤：被忽略窗口直接丢弃，保留上一个活动不切换
+            display, category, ignore = normalize_window(proc_name, title)
+            if ignore:
+                # 也记录被忽略的窗口（标记 event=ignored），便于后续排查规则
+                _win_jsonl_write({
+                    'ts': time.time(),
+                    'event': 'ignored',
+                    'proc_raw': proc_name,
+                    'title_raw': title,
+                })
+                return
             now = time.time()
             with _win_activity.lock:
                 # 结束上一个窗口记录
                 if _win_activity.title:
                     duration = now - _win_activity.start_time
-                    if _win_activity.current_record_id is None:
-                        _win_activity.current_record_id = _win_db.insert_record(
-                            _win_activity.proc, _win_activity.title,
-                            _win_activity.start_time, duration, _win_activity.state
-                        )
-                    else:
+                    # ── v4：单次停留 <2s 不入 SQLite（避免噪音淹没统计）──
+                    if duration >= 2.0:
+                        if _win_activity.current_record_id is None:
+                            _win_activity.current_record_id = _win_db.insert_record(
+                                _win_activity.proc, _win_activity.title,
+                                _win_activity.start_time, duration, _win_activity.state
+                            )
+                        else:
+                            _win_db.update_record(_win_activity.current_record_id, duration=duration)
+                    elif _win_activity.current_record_id is not None:
+                        # 已经入库的短窗口（提前在 timeout_checker 中插入），更新最终 dur
                         _win_db.update_record(_win_activity.current_record_id, duration=duration)
+                    # 写入 JSONL：上一个窗口的完整记录（无论时长）
+                    _win_jsonl_write({
+                        'ts': _win_activity.start_time,
+                        'end_ts': now,
+                        'dur': round(duration, 2),
+                        'event': 'switch',
+                        'proc_raw': _win_activity.proc,
+                        'title_raw': _win_activity.title,
+                        'display': _win_activity.display,
+                        'category': _win_activity.category,
+                        'state': _win_activity.state,
+                        'persisted': duration >= 2.0,
+                    })
 
                 # 开始新窗口
                 _win_activity.proc = proc_name
                 _win_activity.title = title
+                _win_activity.display = display
+                _win_activity.category = category
                 _win_activity.start_time = now
                 _win_activity.current_record_id = None
                 _win_activity.state = _win_clf.classify(proc_name, title, stay_seconds=0)
-                # Track recent windows for multi-monitor display
-                key = (proc_name.lower(), title[:40].lower())
-                if not _win_activity._recent or (_win_activity._recent[-1]['proc'] != proc_name or _win_activity._recent[-1]['title'] != title):
+                # Track recent windows for multi-monitor display（使用归一化后显示名）
+                if not _win_activity._recent or (
+                    _win_activity._recent[-1].get('proc') != display
+                    or _win_activity._recent[-1].get('title') != title
+                ):
                     _win_activity._recent.append({
-                        'proc': proc_name,
+                        'proc': display,
                         'title': title[:45],
                         'state': _win_activity.state,
+                        'category': category,
                         'ts': now,
                     })
+                # JSONL：新窗口开始事件（包含原始 + 归一化字段，便于规则诊断）
+                _win_jsonl_write({
+                    'ts': now,
+                    'event': 'enter',
+                    'proc_raw': proc_name,
+                    'title_raw': title,
+                    'display': display,
+                    'category': category,
+                    'state': _win_activity.state,
+                })
         def _timeout_checker():
             while True:
                 time.sleep(5)
@@ -3870,18 +4982,19 @@ def _init_win_monitor():
                             _win_activity.proc, _win_activity.title, stay_seconds=stay
                         )
                         _win_activity.state = new_state
-                        # 持续更新当前记录 duration
-                        if _win_activity.current_record_id is None:
-                            _win_activity.current_record_id = _win_db.insert_record(
-                                _win_activity.proc, _win_activity.title,
-                                _win_activity.start_time, stay, _win_activity.state
-                            )
-                        else:
-                            _win_db.update_record(
-                                _win_activity.current_record_id,
-                                duration=stay,
-                                state=_win_activity.state
-                            )
+                        # ── v3：仅当停留 ≥5s 才入库/更新 ──
+                        if stay >= 2.0:
+                            if _win_activity.current_record_id is None:
+                                _win_activity.current_record_id = _win_db.insert_record(
+                                    _win_activity.proc, _win_activity.title,
+                                    _win_activity.start_time, stay, _win_activity.state
+                                )
+                            else:
+                                _win_db.update_record(
+                                    _win_activity.current_record_id,
+                                    duration=stay,
+                                    state=_win_activity.state
+                                )
                 except Exception:
                     pass
 
@@ -3918,6 +5031,10 @@ def _init_win_monitor():
                         try:
                             proc_name = psutil.Process(pid.value).name()
                         except Exception:
+                            return True
+                        # 归一化过滤：跳过系统噪音窗口
+                        display, category, ignore = normalize_window(proc_name, title)
+                        if ignore:
                             return True
                         key = (proc_name.lower(), title[:40])
                         if key in seen:
@@ -3963,6 +5080,19 @@ CORS(flask_app)
 @flask_app.route('/api/version', methods=['GET'])
 def api_version():
     return jsonify({'version': APP_VERSION, 'build_time': _BUILD_TIME})
+
+@flask_app.after_request
+def _no_cache_static(resp):
+    """禁止浏览器缓存 html/js/css，确保 Ctrl+F5（含普通刷新）总能拿到最新前端"""
+    try:
+        ct = (resp.headers.get('Content-Type') or '').lower()
+        if any(t in ct for t in ('text/html', 'javascript', 'text/css')):
+            resp.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+            resp.headers['Pragma'] = 'no-cache'
+            resp.headers['Expires'] = '0'
+    except Exception:
+        pass
+    return resp
 
 @flask_app.route('/')
 def index():
@@ -4237,21 +5367,124 @@ def api_window_classify():
             }
         _win_db.update_record(record_id, state=state)
         row = _win_db.get_record_by_id(record_id)
+        keyword = None
         if row:
-            keyword = row['title'][:8].strip()
+            keyword = row['title'][:30].strip()
             list_type = 'white' if state == 'focus' else 'black'
             if keyword:
                 _win_db.add_keyword(keyword, list_type, row['proc_name'])
-        # 同步更新当前活动状态
+                if list_type == 'black' and _win_clf:
+                    _win_clf.add_force_kw(keyword)
+        # 同步更新当前活动状态（立刻生效，无宽容期）
         with _win_activity.lock:
             if _win_activity.title and _win_db:
                 stay = time.time() - _win_activity.start_time
-                _win_activity.state = _win_clf.classify(
+                new_state = _win_clf.classify(
                     _win_activity.proc, _win_activity.title, stay_seconds=stay
                 )
+                _win_activity.state = new_state
         return json.dumps({'success': True}), 200, {'Content-Type': 'application/json; charset=utf-8'}
     except Exception as e:
         return json.dumps({'error': str(e)}), 500, {'Content-Type': 'application/json; charset=utf-8'}
+
+
+# ───────── v3 新增窗口 API：三色统计 / Top / Pending / 拨档 ─────────
+
+def _json_resp(data, status=200):
+    return json.dumps(data, ensure_ascii=False), status, {
+        'Content-Type': 'application/json; charset=utf-8'
+    }
+
+
+@flask_app.route('/api/window/stats_today', methods=['GET'])
+def api_window_stats_today():
+    if _win_db is None or _win_clf is None:
+        return _json_resp({'focus': 0, 'distracted': 0, 'neutral': 0, 'unknown': 0, 'total': 0})
+    try:
+        return _json_resp(_win_db.get_stats_today(_win_clf))
+    except Exception as e:
+        return _json_resp({'error': str(e)}, 500)
+
+
+@flask_app.route('/api/window/top', methods=['GET'])
+def api_window_top():
+    """返回 {focus: [...top5], distracted: [...top5], all: [...top10]}"""
+    if _win_db is None or _win_clf is None:
+        return _json_resp({'focus': [], 'distracted': [], 'all': []})
+    try:
+        n = int(request.args.get('n', 5))
+        return _json_resp({
+            'focus': _win_db.get_top_by_state(_win_clf, 'focus', n),
+            'distracted': _win_db.get_top_by_state(_win_clf, 'distracted', n),
+            'neutral': _win_db.get_top_by_state(_win_clf, 'neutral', n),
+            'all': _win_db.get_top_all(_win_clf, max(10, n * 2)),
+        })
+    except Exception as e:
+        return _json_resp({'error': str(e)}, 500)
+
+
+@flask_app.route('/api/window/pending', methods=['GET'])
+def api_window_pending():
+    """待分类（unknown）display 聚合列表"""
+    if _win_db is None or _win_clf is None:
+        return _json_resp([])
+    try:
+        return _json_resp(_win_db.get_pending_displays(_win_clf, limit=30))
+    except Exception as e:
+        return _json_resp({'error': str(e)}, 500)
+
+
+@flask_app.route('/api/window/classify_display', methods=['POST'])
+def api_window_classify_display():
+    """按 display 拨档：body = {display, proc, state, kind?}"""
+    if _win_db is None or _win_clf is None:
+        return _json_resp({'error': 'monitor not available'}, 503)
+    try:
+        body = request.get_json() or {}
+        display = (body.get('display') or '').strip()
+        proc = (body.get('proc') or '').strip()
+        state = body.get('state', '')
+        kind = body.get('kind')  # 'site' | 'proc' | None
+        if not display or state not in ('focus', 'distracted', 'neutral', 'reset'):
+            return _json_resp({'error': 'invalid params'}, 400)
+        ok = _win_db.classify_display(proc, display, state, kind=kind)
+        with _win_activity.lock:
+            if _win_activity.title:
+                _win_activity.state = _win_clf.classify(_win_activity.proc, _win_activity.title)
+        return _json_resp({'success': ok})
+    except Exception as e:
+        return _json_resp({'error': str(e)}, 500)
+
+
+@flask_app.route('/api/window/all_rules', methods=['GET'])
+def api_window_all_rules():
+    """返回完整规则列表（内置 + 用户覆盖），供 UI 拨档"""
+    if _win_db is None:
+        return _json_resp({'procs': [], 'sites': []})
+    try:
+        today_only = request.args.get('today_only', '0') in ('1', 'true', 'True')
+        return _json_resp(_win_db.get_all_rules(today_only=today_only))
+    except Exception as e:
+        return _json_resp({'error': str(e)}, 500)
+
+
+@flask_app.route('/api/window/distracted_alert', methods=['GET'])
+def api_window_distracted_alert():
+    """前端轮询：当前是否处于 distracted 且持续 ≥60s"""
+    try:
+        with _win_activity.lock:
+            stay = int(time.time() - _win_activity.start_time) if _win_activity.title else 0
+            return _json_resp({
+                'distracted': _win_activity.state == 'distracted',
+                'state': _win_activity.state,
+                'stay_sec': stay,
+                'should_alert': _win_activity.state == 'distracted' and stay >= 60,
+                'display': _win_activity.display,
+                'title': _win_activity.title,
+            })
+    except Exception as e:
+        return _json_resp({'error': str(e)}, 500)
+
 
 def run_flask():
     """在独立线程中运行 Flask"""

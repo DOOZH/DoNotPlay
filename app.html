@@ -3,10 +3,11 @@
 
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DoNotPlay</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">  <title>DoNotPlay</title>
   <link rel="icon" href="DoNotPlay.png" type="image/png">
-  <link rel="stylesheet" href="app.css">
+  <link rel="stylesheet" href="app.css?v=67">
 </head>
 
 <body>
@@ -14,16 +15,17 @@
   <div class="hdr">
     <div class="hdr-brand">
       <img src="DoNotPlay.png" width="16" height="16" style="border-radius:50%;">
-      <span id="versionLabel">DoNotPlay v2.0</span>
+      <span id="versionLabel">DoNotPlay V3.0</span>
     </div>
     <div class="hdr-right">
-      <button class="hdr-btn" id="sensBtn" title="专注灵敏度 [S]" data-i18n-title="tt_sens"><span data-i18n="sens_btn">灵敏度: 正常</span></button>
-      <button class="hdr-btn" id="soundBtn" title="切换音频提示 [M]" data-i18n-title="tt_sound"><span data-i18n="sound_off">声音: 关闭</span></button>
+      <button class="hdr-btn active" id="soundBtn" title="切换音频提示 [M]" data-i18n-title="tt_sound"><span data-i18n="sound_on">声音: 开启</span></button>
       <button class="hdr-btn" id="themeBtn" title="切换深色/浅色模式 [T]" data-i18n-title="tt_theme"><span data-i18n="theme_auto">主题</span></button>
       <button class="hdr-btn" id="rotateBtn" title="旋转摄像头视角 [V]" data-i18n-title="tt_rotate"><span data-i18n="rotate">视角旋转</span></button>
-      <button class="hdr-btn" id="refreshBtn" title="刷新页面和后端连接 [R]" data-i18n-title="tt_refresh"><span data-i18n="refresh">刷新</span></button>
+      <button class="hdr-btn" id="calibBtn" title="校准视线焦点区间 [C]" data-i18n-title="tt_calib"><span data-i18n="calib_btn">校准</span></button>
+      <button class="hdr-btn" id="reloadBtn" title="刷新页面" onclick="location.reload(true)">刷新</button>
       <button class="hdr-btn" id="langBtn" title="Switch Language"><span id="langBtnTxt">EN</span></button>
       <button class="hdr-btn" id="aboutBtn" data-i18n="about">关于</button>
+      <button class="hdr-btn hdr-btn-menu" id="menuBtn" title="打开侧边栏" aria-label="menu"><span class="hb-line"></span><span class="hb-line"></span><span class="hb-line"></span></button>
       <div class="clock" id="clk">--:--:--</div>
       <div class="pill" id="sPill" style="background:var(--bg3);color:var(--muted);border-color:var(--border)">
         <div class="dot" id="sDot" style="background:var(--muted)"></div>
@@ -34,25 +36,27 @@
 
   <div class="body">
     <!-- 浏览器控制台同步组件已移除，统一由 app.js 处理 -->
-    <div class="cam-panel">
+    <div class="cam-panel" id="camPanel" data-drawer-item>
       <div class="cam-view">
         <video id="vid" playsinline autoplay muted style="display:none"></video>
         <canvas id="cnv" style="display:none"></canvas>
         <img id="vid_stream" src="/video_feed" alt="摄像头画面"
           style="width:100%;height:100%;object-fit:contain;border-radius:inherit;">
-        <!-- Telemetry Data Overlays (Portrait Only) -->
+        <!-- HUD（极简、低饱和）：顶部仅显示专注时长，底部仅显示当前姿态 -->
         <div class="cam-meta-top">
-          <span id="mMetaEngine">AISP: --</span>
-          <span style="margin-left:auto">EAR: <span id="mMetaEAR">0.00</span></span>
-          <span style="margin-left:12px">POSE: <span id="mMetaPose">0,0</span></span>
+          <span class="hud-pill"><span class="hud-key">FOCUS</span> <span id="mFocus">00:00</span></span>
+          <span class="hud-pill" style="margin-left:auto"><span class="hud-key">DUR</span> <span id="mMetaDur">00:00</span></span>
         </div>
         <div class="cam-meta-bottom">
-          <span id="mMetaLatency">LAT: 0ms</span>
-          <span style="margin-left:12px">DURATION: <span id="mMetaDur">00:00</span></span>
-          <span style="margin-left:12px">FOCUS: <span id="mFocus">00:00</span></span>
-          <span style="margin-left:auto">ALRT: <span id="mMetaAlerts">0</span></span>
-          <span style="margin-left:12px">RES: <span id="mMetaRes">640x480</span></span>
+          <span class="hud-pill" style="margin-left:auto"><span class="hud-key">LAT</span> <span id="mMetaLatency">0ms</span></span>
         </div>
+        <!-- 隐藏字段：兼容旧版 JS 仍在写入 -->
+        <span id="mMetaEAR" style="display:none">0.00</span>
+        <span id="mMetaPose" style="display:none">0,0</span>
+        <!-- 隐藏字段：兼容旧版 JS 仍在写入 -->
+        <span id="mMetaEngine" style="display:none">AISP: --</span>
+        <span id="mMetaAlerts" style="display:none">0</span>
+        <span id="mMetaRes" style="display:none">640x480</span>
         <div class="cam-corners">
           <div class="brk tl"></div>
           <div class="brk tr"></div>
@@ -68,41 +72,63 @@
           <button class="cam-btn" id="camBtn" data-i18n="cam_enable">启用摄像头</button>
           <p id="errMsg" style="color:var(--red-d);font-size:10px;margin-top:4px"></p>
         </div>
-      </div>
-      <div class="md3-stats">
-        <div class="md3-stat-card" id="cardEyeUsage" data-metric="eye_usage">
-          <div class="md3-stat-icon">⏱️</div>
-          <div class="md3-stat-info">
-            <div class="md3-stat-lbl" data-i18n="lbl_eye_usage">连续用眼</div>
-            <div class="md3-stat-val" id="cEyeUsage">0分钟</div>
+        <!-- Calibration Overlay -->
+        <div class="calib-overlay" id="calibOverlay">
+          <!-- Corner targets (always present; active/done via JS) -->
+          <div class="calib-corner-target" data-corner="0" id="calibTarget0">◎</div>
+          <div class="calib-corner-target" data-corner="1" id="calibTarget1">◎</div>
+          <div class="calib-corner-target" data-corner="2" id="calibTarget2">◎</div>
+          <div class="calib-corner-target" data-corner="3" id="calibTarget3">◎</div>
+          <!-- Intro panel: shown first with countdown -->
+          <div class="calib-intro-panel" id="calibIntro" style="display:none">
+            <div class="calib-intro-icon">🎯</div>
+            <div class="calib-intro-title" id="calibIntroTitle">校准向导</div>
+            <div class="calib-intro-msg" id="calibIntroMsg">依次注视四个角落，每个角落保持稳定 1-2 秒，系统自动采集。</div>
+            <div class="calib-intro-cntd" id="calibIntroCountdown">3</div>
           </div>
-        </div>
-
-        <div class="md3-stat-card" id="cardNeck" data-metric="neck">
-          <div class="md3-stat-icon">🦴</div>
-          <div class="md3-stat-info">
-            <div class="md3-stat-lbl" data-i18n="lbl_neck">颈部前倾</div>
-            <div class="md3-stat-val" id="cNeckStrain">正常</div>
-          </div>
-        </div>
-        <div class="md3-stat-card" id="cardShoulder" data-metric="shoulder">
-          <div class="md3-stat-icon">⚖️</div>
-          <div class="md3-stat-info">
-            <div class="md3-stat-lbl" data-i18n="lbl_shoulder">肩颈平衡</div>
-            <div class="md3-stat-val" id="cShoulderSymmetry">端正</div>
-          </div>
-        </div>
-        <div class="md3-stat-card" id="cardHydration" data-metric="hydration">
-          <div class="md3-stat-icon">💧</div>
-          <div class="md3-stat-info">
-            <div class="md3-stat-lbl" data-i18n="lbl_hydration">上次饮水</div>
-            <div class="md3-stat-val" id="cHydration">0 分钟前</div>
+          <!-- Main step UI: shown after intro -->
+          <div class="calib-center-panel" id="calibMain" style="display:none">
+            <div class="calib-step-dots">
+              <span class="calib-dot" id="calibDot0">○</span>
+              <span class="calib-dot" id="calibDot1">○</span>
+              <span class="calib-dot" id="calibDot2">○</span>
+              <span class="calib-dot" id="calibDot3">○</span>
+            </div>
+            <div class="calib-ring"><div class="calib-ring-inner"></div></div>
+            <div class="calib-text" id="calibText">请注视...</div>
+            <div class="calib-countdown" id="calibCountdown"></div>
           </div>
         </div>
       </div>
     </div>
 
     <div class="dash">
+      <!-- 健康指标（独立模块化板块） -->
+      <div class="sec health-sec" data-bento="health">
+        <div class="md3-stats md3-stats-chips">
+          <div class="md3-chip" id="cardEyeUsage" data-metric="eye_usage">
+            <span class="md3-chip-icon">⏱️</span>
+            <span class="md3-chip-lbl" data-i18n="lbl_eye_usage">连续用眼</span>
+            <span class="md3-chip-val" id="cEyeUsage">0分钟</span>
+          </div>
+          <div class="md3-chip" id="cardNeck" data-metric="neck">
+            <span class="md3-chip-icon">🦴</span>
+            <span class="md3-chip-lbl" data-i18n="lbl_neck">颈部前倾</span>
+            <span class="md3-chip-val" id="cNeckStrain">正常</span>
+          </div>
+          <div class="md3-chip" id="cardShoulder" data-metric="shoulder">
+            <span class="md3-chip-icon">⚖️</span>
+            <span class="md3-chip-lbl" data-i18n="lbl_shoulder">肩颈平衡</span>
+            <span class="md3-chip-val" id="cShoulderSymmetry">端正</span>
+          </div>
+          <div class="md3-chip" id="cardHydration" data-metric="hydration">
+            <span class="md3-chip-icon">💧</span>
+            <span class="md3-chip-lbl" data-i18n="lbl_hydration">上次饮水</span>
+            <span class="md3-chip-val" id="cHydration">0 分钟前</span>
+          </div>
+        </div>
+      </div>
+
       <!-- Banners -->
       <div class="banner break-banner" id="brkBanner">
         <div class="banner-txt" id="brkBannerTxt" data-i18n="brk_banner">该休息了！</div>
@@ -114,34 +140,34 @@
         <button class="banner-btn" id="phoneDismissBtn" data-i18n="phone_put_down">我已放下</button>
       </div>
 
-      <!-- NEW METRIC GRID -->
-      <div class="metric-grid">
-        <div class="md-card">
-          <div class="md-card-icon">⏱️</div>
-          <div class="md-card-lbl" data-i18n="lbl_duration">总时长</div>
-          <div class="md-card-val" id="phaseElapsed">00:00:00</div>
-        </div>
-        <div class="md-card">
-          <div class="md-card-icon">🔥</div>
-          <div class="md-card-lbl" data-i18n="lbl_streak">当前连续专注</div>
-          <div class="md-card-val" id="curPhaseStreak" style="color:var(--blue)">00:00:00</div>
-        </div>
-        <div class="md-card">
+      <!-- METRIC GRID：6 个等大累计卡（2 行 × 3 列） -->
+      <div class="metric-grid metric-grid-hero" data-bento="hero">
+        <div class="md-card md-card-hero">
           <div class="md-card-icon">🎯</div>
           <div class="md-card-lbl" data-i18n="lbl_focus">累计专注</div>
           <div class="md-card-val" id="phaseFocus" style="color:var(--green)">00:00:00</div>
         </div>
-        <div class="md-card">
-          <div class="md-card-icon">📱</div>
-          <div class="md-card-lbl" data-i18n="lbl_phone">累计玩手机</div>
-          <div class="md-card-val" id="phasePhone" style="color:var(--purple)">00:00:00</div>
+        <div class="md-card md-card-hero">
+          <div class="md-card-icon">🔥</div>
+          <div class="md-card-lbl" data-i18n="lbl_streak">当前连续专注</div>
+          <div class="md-card-val" id="curPhaseStreak" style="color:var(--blue)">00:00:00</div>
         </div>
-        <div class="md-card">
+        <div class="md-card md-card-hero">
           <div class="md-card-icon">💭</div>
           <div class="md-card-lbl" data-i18n="lbl_dist">累计走神</div>
           <div class="md-card-val" id="phaseDist" style="color:var(--amber)">00:00:00</div>
         </div>
-        <div class="md-card">
+        <div class="md-card md-card-hero">
+          <div class="md-card-icon">⏱️</div>
+          <div class="md-card-lbl" data-i18n="lbl_duration">总时长</div>
+          <div class="md-card-val" id="phaseElapsed">00:00:00</div>
+        </div>
+        <div class="md-card md-card-hero">
+          <div class="md-card-icon">📱</div>
+          <div class="md-card-lbl" data-i18n="lbl_phone">累计玩手机</div>
+          <div class="md-card-val" id="phasePhone" style="color:var(--purple)">00:00:00</div>
+        </div>
+        <div class="md-card md-card-hero">
           <div class="md-card-icon">🚶</div>
           <div class="md-card-lbl" data-i18n="lbl_away">累计离开</div>
           <div class="md-card-val" id="phaseAway" style="color:var(--red-d)">00:00:00</div>
@@ -150,9 +176,9 @@
 
 
 
-      <div class="two-col">
-        <!-- Window Activity Monitor -->
-        <div class="sec" id="winMonitorSec">
+      <div class="two-col bento-twocol-wrap">
+        <!-- Window Activity Monitor（当前窗口） -->
+        <div class="sec" id="winMonitorSec" data-bento="win">
           <div class="sec-title">
             <span data-i18n="win_current">当前窗口</span>
             <span id="winStateChip" class="wa-chip wa-unknown" data-i18n="st_unknown">未知</span>
@@ -169,77 +195,109 @@
           </div>
         </div>
 
-        <!-- Daily Goal -->
-        <div class="sec">
-          <div class="sec-title" data-i18n="goal_daily">每日目标</div>
-          <div class="goal-ring-wrap">
-            <div class="goal-ring">
-              <svg width="60" height="60" viewBox="0 0 60 60">
-                <circle cx="30" cy="30" r="26" fill="none" stroke="var(--border)" stroke-width="4" />
-                <circle cx="30" cy="30" r="26" fill="none" stroke="var(--green)" stroke-width="4" stroke-linecap="round"
-                  stroke-dasharray="163.36" stroke-dashoffset="163.36" id="goalArc" />
-              </svg>
-              <div class="goal-ring-pct" id="goalPct" style="color:var(--green)">0%</div>
+        <!-- 目标管理（拆分为 3 列独立卡） -->
+        <div class="sec goal-tabs-sec goal-split" data-bento="goal">
+
+          <!-- 每日目标 -->
+          <div class="goal-pane" id="goalPane_daily">
+            <div class="goal-ring-wrap">
+              <div class="goal-ring">
+                <svg width="60" height="60" viewBox="0 0 60 60">
+                  <circle cx="30" cy="30" r="26" fill="none" stroke="var(--border)" stroke-width="4" />
+                  <circle cx="30" cy="30" r="26" fill="none" stroke="var(--green)" stroke-width="4" stroke-linecap="round"
+                    stroke-dasharray="163.36" stroke-dashoffset="163.36" id="goalArc" />
+                </svg>
+                <div class="goal-ring-pct" id="goalPct" style="color:var(--green)">0%</div>
+              </div>
+              <div class="goal-info">
+                <span id="goalProgress">0m / 120m 专注</span>
+                <span id="goalToday" style="color:var(--hint);font-size:9px">今日会话: 0</span>
+                <div class="goal-set">
+                  <input type="number" id="goalInput" value="300" min="10" max="600">
+                  <label data-i18n="goal_min_lbl">分钟目标</label>
+                </div>
+              </div>
             </div>
-            <div class="goal-info">
-              <span id="goalProgress">0m / 120m 专注</span>
-              <span id="goalToday" style="color:var(--hint);font-size:9px">今日会话: 0</span>
-              <div class="goal-set">
-                <input type="number" id="goalInput" value="300" min="10" max="600">
-                <label data-i18n="goal_min_lbl">分钟目标</label>
+          </div>
+
+          <!-- 本次目标 -->
+          <div class="goal-pane" id="goalPane_session">
+            <div class="goal-ring-wrap">
+              <div class="goal-ring">
+                <svg width="60" height="60" viewBox="0 0 60 60">
+                  <circle cx="30" cy="30" r="26" fill="none" stroke="var(--border)" stroke-width="4" />
+                  <circle cx="30" cy="30" r="26" fill="none" stroke="var(--blue)" stroke-width="4" stroke-linecap="round"
+                    stroke-dasharray="163.36" stroke-dashoffset="163.36" id="sessionGoalArc" />
+                </svg>
+                <div class="goal-ring-pct" id="sessionGoalPct" style="color:var(--blue)">0%</div>
+              </div>
+              <div class="goal-info">
+                <span id="sessionGoalProgress">0m / 60m 专注</span>
+                <span id="sessionGoalStatus" style="color:var(--hint);font-size:9px" data-i18n="goal_session_progress">本次目标进度</span>
+                <div class="goal-set">
+                  <input type="number" id="sessionGoalInput" value="60" min="5" max="600">
+                  <label data-i18n="goal_min_lbl">分钟目标</label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 休息一下 -->
+          <div class="goal-pane" id="goalPane_break">
+            <div class="goal-ring-wrap" id="breakSec">
+              <div class="goal-ring">
+                <svg width="60" height="60" viewBox="0 0 60 60">
+                  <circle cx="30" cy="30" r="26" fill="none" stroke="var(--border)" stroke-width="4" />
+                  <circle cx="30" cy="30" r="26" fill="none" stroke="var(--primary)" stroke-width="4"
+                    stroke-linecap="round" stroke-dasharray="163.36" stroke-dashoffset="163.36" id="breakArc" />
+                </svg>
+                <div class="goal-ring-pct" id="breakTimer" style="color:var(--primary)">00:00</div>
+              </div>
+              <div class="goal-info">
+                <span id="breakStatus" data-i18n="break_set">设定时间并休息</span>
+                <span style="color:var(--hint);font-size:9px" data-i18n="break_session_hint">本次休息设置</span>
+                <div class="goal-set">
+                  <input type="number" id="breakInput" value="15" min="1" max="60">
+                  <button class="goal-start-btn" id="breakStartBtn">
+                    <span data-i18n="start">开始</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
         </div>
+      </div>
 
-        <!-- Session Goal -->
-        <div class="sec">
-          <div class="sec-title" data-i18n="goal_session">本次目标</div>
-          <div class="goal-ring-wrap">
-            <div class="goal-ring">
-              <svg width="60" height="60" viewBox="0 0 60 60">
-                <circle cx="30" cy="30" r="26" fill="none" stroke="var(--border)" stroke-width="4" />
-                <circle cx="30" cy="30" r="26" fill="none" stroke="var(--blue)" stroke-width="4" stroke-linecap="round"
-                  stroke-dasharray="163.36" stroke-dashoffset="163.36" id="sessionGoalArc" />
-              </svg>
-              <div class="goal-ring-pct" id="sessionGoalPct" style="color:var(--blue)">0%</div>
-            </div>
-            <div class="goal-info">
-              <span id="sessionGoalProgress">0m / 60m 专注</span>
-              <span id="sessionGoalStatus" style="color:var(--hint);font-size:9px" data-i18n="goal_session_progress">本次目标进度</span>
-              <div class="goal-set">
-                <input type="number" id="sessionGoalInput" value="60" min="5" max="600">
-                <label data-i18n="goal_min_lbl">分钟目标</label>
-              </div>
-            </div>
+
+      <!-- Window Activity（合并：当前窗口在 two-col 上方；本卡显示 Top5 + 规则总表） -->
+      <div class="sec" id="winLogSec" data-bento="winlog">
+        <div class="sec-title" data-i18n="wl_title">窗口活动 · Top5 与规则</div>
+
+        <!-- Top5 双栏 -->
+        <div class="wa-top-grid">
+          <div class="wa-top-col">
+            <div class="wa-top-head wa-th-focus">✅ 专注 Top 5</div>
+            <div class="wa-top-list" id="waTopFocus"></div>
+          </div>
+          <div class="wa-top-col">
+            <div class="wa-top-head wa-th-dist">🚫 走神 Top 5</div>
+            <div class="wa-top-list" id="waTopDist"></div>
           </div>
         </div>
 
-        <!-- Take a Break -->
-        <div class="sec" id="breakSec">
-          <div class="sec-title" data-i18n="break_title">休息一下</div>
-          <div class="break-layout">
-            <div class="goal-ring">
-              <svg width="60" height="60" viewBox="0 0 60 60">
-                <circle cx="30" cy="30" r="26" fill="none" stroke="var(--border)" stroke-width="4" />
-                <circle cx="30" cy="30" r="26" fill="none" stroke="var(--primary)" stroke-width="4"
-                  stroke-linecap="round" stroke-dasharray="163.36" stroke-dashoffset="163.36" id="breakArc" />
-              </svg>
-              <div class="goal-ring-pct" id="breakTimer" style="color:var(--primary)">00:00</div>
+        <!-- 规则总表（移入右抽屉） -->
+        <div class="wa-collapsible" id="wlRulesWrap" data-drawer-item>
+          <div class="wa-collapsible-head" onclick="_toggleSec('wlRules')">
+            <span>⚙️ 规则总表（点按钮即可改判）</span>
+            <span class="wa-arrow" id="wlRulesArr">▾</span>
+          </div>
+          <div id="wlRules" class="wl-subpanel">
+            <div class="wl-rule-tabs">
+              <button class="wl-rtab active" data-rt="proc">📦 程序名单</button>
+              <button class="wl-rtab" data-rt="site">🌐 网站名单</button>
             </div>
-
-            <div class="break-mid">
-              <span id="breakStatus" data-i18n="break_set">设定时间并休息</span>
-              <div class="goal-set">
-                <input type="number" id="breakInput" value="15" min="1" max="60">
-                <label data-i18n="break_min">分钟</label>
-              </div>
-            </div>
-
-            <button class="md3-btn-large" id="breakStartBtn">
-              <span class="md3-btn-icon">☕</span>
-              <span class="md3-btn-text" data-i18n="start">开始</span>
-            </button>
+            <div id="wlRuleProc" class="wa-rules-full"></div>
+            <div id="wlRuleSite" class="wa-rules-full hidden"></div>
           </div>
         </div>
       </div>
@@ -248,7 +306,7 @@
 
 
       <!-- Focus Streaks / Leaderboard -->
-      <div class="sec" id="lbSec">
+      <div class="sec" id="lbSec" data-bento="lb">
         <div class="sec-title" data-i18n="lb_title">排行榜</div>
         <div class="podium-wrap" id="podiumArea">
           <!-- 左侧：当前数据区 -->
@@ -290,7 +348,7 @@
       </div>
 
       <!-- Session Timeline -->
-      <div class="sec">
+      <div class="sec" data-bento="tl">
         <div class="sec-title">
           <span data-i18n="tl_title">时间轴</span>
           <span class="sec-title-right">
@@ -304,7 +362,7 @@
       </div>
 
       <!-- Weekly Heatmap -->
-      <div class="sec">
+      <div class="sec" data-bento="hm">
         <div class="sec-title" data-i18n="heatmap_title">热力图</div>
         <div class="heatmap-wrap">
           <div class="heatmap" id="heatmap"></div>
@@ -312,75 +370,29 @@
       </div>
 
 
-      <!-- Window Log -->
-      <div class="sec" id="winLogSec">
-        <div class="sec-title" data-i18n="wl_title">窗口日志</div>
-        <div class="wl-subtabs">
-          <button class="wl-stab active" data-panel="wlRecord" data-i18n="wl_usage">使用记录</button>
-          <button class="wl-stab" data-panel="wlRules" data-i18n="wl_rules">规则管理</button>
-        </div>
-        <div id="wlRecord" class="wl-subpanel">
-          <div id="winLogTop10" class="wl-top10"></div>
-          <div id="winLogList" class="wl-list"></div>
-        </div>
-        <div id="wlRules" class="wl-subpanel hidden">
-          <div class="wl-rule-tabs">
-            <button class="wl-rtab active" data-rt="proc" data-i18n="wl_proc_rules">程序名单</button>
-            <button class="wl-rtab" data-rt="title" data-i18n="wl_title_rules">页面名单</button>
-          </div>
-          <div id="wlRuleProc" class="wl-ruleset">
-            <div class="wl-rules-grid">
-              <div class="wl-rules-col">
-                <div class="wl-rules-title" data-i18n="wl_focus_apps">✅ 专注程序</div>
-                <div id="wlProcWhite" class="wl-kw-list"></div>
-                <div class="wl-kw-add">
-                  <input id="wlProcWhiteInput" type="text" data-i18n-ph="wl_ph_proc_white" placeholder="程序名 (如 winword)" />
-                  <button class="wl-kw-btn wl-kw-btn-f" onclick="_addKeyword('white','proc','wlProcWhiteInput')" data-i18n="add">添加</button>
-                </div>
-              </div>
-              <div class="wl-rules-col">
-                <div class="wl-rules-title" data-i18n="wl_dist_apps">🚫 走神程序</div>
-                <div id="wlProcBlack" class="wl-kw-list"></div>
-                <div class="wl-kw-add">
-                  <input id="wlProcBlackInput" type="text" data-i18n-ph="wl_ph_proc_black" placeholder="程序名 (如 game)" />
-                  <button class="wl-kw-btn wl-kw-btn-d" onclick="_addKeyword('black','proc','wlProcBlackInput')" data-i18n="add">添加</button>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div id="wlRuleTitle" class="wl-ruleset hidden">
-            <div class="wl-browser-note" data-i18n="wl_browser_note">💡 页面名单仅匹配浏览器标题（Chrome / Edge / Firefox 等）</div>
-            <div class="wl-rules-grid">
-              <div class="wl-rules-col">
-                <div class="wl-rules-title" data-i18n="wl_focus_pages">✅ 专注页面</div>
-                <div id="wlTitleWhite" class="wl-kw-list"></div>
-                <div class="wl-kw-add">
-                  <input id="wlTitleWhiteInput" type="text" data-i18n-ph="wl_ph_title_white" placeholder="标题关键词 (如 GitHub)" />
-                  <button class="wl-kw-btn wl-kw-btn-f" onclick="_addKeyword('white','title','wlTitleWhiteInput')" data-i18n="add">添加</button>
-                </div>
-              </div>
-              <div class="wl-rules-col">
-                <div class="wl-rules-title" data-i18n="wl_dist_pages">🚫 走神页面</div>
-                <div id="wlTitleBlack" class="wl-kw-list"></div>
-                <div class="wl-kw-add">
-                  <input id="wlTitleBlackInput" type="text" data-i18n-ph="wl_ph_title_black" placeholder="标题关键词 (如 bilibili)" />
-                  <button class="wl-kw-btn wl-kw-btn-d" onclick="_addKeyword('black','title','wlTitleBlackInput')" data-i18n="add">添加</button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <!-- Event Log -->
-      <div class="sec">
-        <div class="sec-title" data-i18n="ev_title">事件日志</div>
-        <div class="ev-list" id="evList">
+      <div class="sec" id="evSec" data-bento="ev" data-drawer-item>
+        <div class="sec-title" onclick="_toggleSec('evList')" style="cursor:pointer">
+          <span data-i18n="ev_title">事件日志</span>
+          <span class="wa-arrow" id="evListArr">▸</span>
+        </div>
+        <div class="ev-list" id="evList" style="display:none">
           <div class="ev"><span class="ev-t">-</span><span class="ev-g" data-i18n="ev_waiting">等待摄像头...</span></div>
         </div>
       </div>
     </div>
   </div>
+
+  <!-- 右侧抽屉：摄像头监控 + 窗口监测 + 事件日志（合并） -->
+  <div class="drawer drawer-right" id="drawer">
+    <div class="drawer-head">
+      <span class="drawer-title">侧边栏</span>
+      <button class="drawer-close" onclick="_toggleDrawer(false)">✕</button>
+    </div>
+    <div class="drawer-body" id="drawerBody"></div>
+  </div>
+
+  <div class="drawer-mask" id="drawerMask" onclick="_closeAllDrawers()"></div>
 
   <div class="toast" id="toast"></div>
 
@@ -433,6 +445,19 @@
     </div>
   </div>
 
+  <!-- 分心应用提醒弹窗（v3：检测到 distracted 应用 >60s）-->
+  <div class="distracted-warning-popup" id="winDistractedPopup">
+    <div class="donotplay-content">
+      <div class="donotplay-icon">📵</div>
+      <div class="donotplay-title" style="text-shadow: 0 4px 30px rgba(255, 120, 0, 0.6);">分心提醒</div>
+      <div class="donotplay-sub">已在 <b id="winDistAppName" style="color:#ffb84d">该应用</b> 停留 <b id="winDistDur">60</b> 秒，要不要切回工作？</div>
+      <div style="display:flex;gap:12px;margin-top:18px">
+        <button class="donotplay-btn" id="winDistKeepBtn" style="background:rgba(255,255,255,0.18);color:#fff">再看 5 分钟</button>
+        <button class="donotplay-btn" id="winDistOkBtn">好，回去工作</button>
+      </div>
+    </div>
+  </div>
+
   <!-- 离开预警弹窗 -->
   <div class="away-warning-popup" id="awayWarningPopup">
     <div class="donotplay-content">
@@ -464,10 +489,6 @@
       <div class="donotplay-sub" data-i18n="popup_water_sub">您已经超过 60 分钟没有饮水了，请补充水分</div>
       <button class="donotplay-btn" id="waterDismissBtn" data-i18n="popup_water_btn">我已饮水</button>
     </div>
-  </div>
-
-  <div class="kbd-hint">
-    <kbd>S</kbd> <span data-i18n="kh_sens">灵敏度</span> &nbsp; <kbd>C</kbd> <span data-i18n="kh_calib">校准</span> &nbsp; <kbd>M</kbd> <span data-i18n="kh_mute">静音</span> &nbsp; <kbd>T</kbd> <span data-i18n="kh_theme">主题</span> &nbsp; <kbd>R</kbd> <span data-i18n="kh_refresh">刷新</span>
   </div>
 
   <!-- Full-screen Pause Overlay for Break -->
@@ -513,7 +534,7 @@
         <img src="DoNotPlay.png" width="48" height="48" style="border-radius:50%;">
         <div class="about-name">DoNotPlay</div>
       </div>
-      <div class="about-row"><span class="about-key" data-i18n="about_version">版本</span><span id="aboutVersion" class="about-val">v2.0</span></div>
+      <div class="about-row"><span class="about-key" data-i18n="about_version">版本</span><span id="aboutVersion" class="about-val">V3.0</span></div>
       <div class="about-row"><span class="about-key" data-i18n="about_build">构建日期</span><span id="aboutBuild" class="about-val">—</span></div>
       <div class="about-divider"></div>
       <div class="about-row"><a class="about-link" href="https://qm.qq.com/q/U4htjG8mg8" target="_blank" data-i18n="about_qq">点击加入 QQ 群</a></div>
@@ -522,7 +543,7 @@
     </div>
   </div>
 
-  <script src="app.js"></script>
+  <script src="app.js?v=67"></script>
 </body>
 
 </html>

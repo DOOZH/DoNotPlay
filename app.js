@@ -122,6 +122,7 @@ const LANGS = {
   zh: {
     sens_btn:'灵敏度: 正常', tt_sens:'专注灵敏度 [S]', tt_sound:'切换音频提示 [M]',
     tt_theme:'切换主题 [T]', tt_rotate:'旋转摄像头视角 [V]', tt_refresh:'刷新 [R]',
+    tt_calib:'校准视线焦点区间 [C]', calib_btn:'校准',
     sound_off:'声音: 关闭', sound_on:'声音: 开启',
     theme_auto:'主题: 自动', theme_dark:'主题: 深色', theme_light:'主题: 浅色',
     rotate:'视角旋转', refresh:'刷新', about:'关于',
@@ -136,7 +137,7 @@ const LANGS = {
     win_current:'当前窗口', win_waiting:'等待检测...', win_today_focus:'今日专注',
     goal_daily:'每日目标', goal_session:'本次目标', goal_min_lbl:'分钟目标',
     goal_session_progress:'本次目标进度',
-    break_title:'休息一下', break_set:'设定时间并休息', break_min:'分钟', start:'开始',
+    break_title:'休息一下', break_set:'设定时间并休息', break_min:'分钟', break_session_hint:'本次休息设置', start:'开始',
     lb_title:'排行榜', lb_cur_streak:'当前连续专注', lb_1st:'冠军', lb_2nd:'亚军',
     lb_3rd:'季军', lb_best_today:'今日最高连续专注', lb_top3_note:'历史 TOP 3 专注',
     tl_title:'时间轴', heatmap_title:'热力图',
@@ -164,18 +165,21 @@ const LANGS = {
     popup_top3_btn:'太棒了',
     popup_water_title:'该喝水了！', popup_water_sub:'您已经超过 60 分钟没有饮水了，请补充水分',
     popup_water_btn:'我已饮水',
-    kh_sens:'灵敏度', kh_calib:'校准', kh_mute:'静音', kh_theme:'主题', kh_refresh:'刷新',
-    pause_label:'正在休息中', pause_quote:'放松一下，稍后回来。',
+    kh_sens:'灵敏度', kh_calib:'校准', kh_mute:'静音', kh_theme:'主题', kh_refresh:'刷新',    pause_label:'正在休息中', pause_quote:'放松一下，稍后回来。',
     pause_elapsed:'已休息时长', pause_remain:'剩余目标时长', pause_resume:'恢复监控',
     err_title:'系统发生异常', err_copy:'复制详细错误', err_dismiss:'忽略并继续',
     about_version:'版本', about_build:'构建时间', about_close:'关闭',
     about_qq:'点击加入 QQ 群', about_tg:'点击加入 Telegram Group',
     calib_inherited:'已校准 (继承)', calib_done_status:'已校准',
-    calib_start_toast:'开始四角校准，请依次注视高亮角落', calib_cam_first:'请先启动摄像头',
+    calib_start_toast:'四角校准已开始，请依次注视高亮角落', calib_cam_first:'请先启动摄像头',
     calib_load_fail:'校准组件加载失败', calib_done_toast:'校准完成！专注区间已设定',
     calib_gaze_at:'请注视', calib_move_gaze:'移动视线到角落…',
     calib_stay_still:'请保持不动，正在采集…', calib_processing:'处理中…',
     calib_next_corner:'请转向下一角落', calib_acquired:'已采集！',
+    calib_intro_title:'校准向导',
+    calib_intro_msg:'系统将引导你依次注视屏幕四个角落。到达每个角落后，保持视线稳定 1-2 秒，系统会自动采集。',
+    calib_corner_0:'左上角', calib_corner_1:'左下角', calib_corner_2:'右下角', calib_corner_3:'右上角',
+    calib_timeout_note:'自动采集超时，强制采集…',
     eye_relax:'👀 看向远方放松眼睛',
     break_stop:'停止', break_on:'休息中...', break_set_time:'请设定休息时间',
     break_started_ev:'开始休息，监控已暂停', break_end_toast:'休息结束，恢复监控...',
@@ -200,6 +204,7 @@ const LANGS = {
   en: {
     sens_btn:'Sensitivity: Normal', tt_sens:'Gaze Sensitivity [S]', tt_sound:'Toggle Sound [M]',
     tt_theme:'Toggle Theme [T]', tt_rotate:'Rotate Camera [V]', tt_refresh:'Refresh [R]',
+    tt_calib:'Calibrate Gaze Focus Zone [C]', calib_btn:'Calibrate',
     sound_off:'Sound: Off', sound_on:'Sound: On',
     theme_auto:'Theme: Auto', theme_dark:'Theme: Dark', theme_light:'Theme: Light',
     rotate:'Rotate', refresh:'Refresh', about:'About',
@@ -214,7 +219,7 @@ const LANGS = {
     win_current:'Current Window', win_waiting:'Waiting...', win_today_focus:'Today Focus',
     goal_daily:'Daily Goal', goal_session:'Session Goal', goal_min_lbl:'min goal',
     goal_session_progress:'Session progress',
-    break_title:'Take a Break', break_set:'Set time and rest', break_min:'min', start:'Start',
+    break_title:'Take a Break', break_set:'Set time and rest', break_min:'min', break_session_hint:'Break settings', start:'Start',
     lb_title:'Leaderboard', lb_cur_streak:'Current Streak', lb_1st:'1st', lb_2nd:'2nd',
     lb_3rd:'3rd', lb_best_today:'Best Today', lb_top3_note:'All-time Top 3',
     tl_title:'Timeline', heatmap_title:'Heatmap',
@@ -249,11 +254,15 @@ const LANGS = {
     about_version:'Version', about_build:'Build Time', about_close:'Close',
     about_qq:'Join QQ Group', about_tg:'Join Telegram Group',
     calib_inherited:'Calibrated (Inherited)', calib_done_status:'Calibrated',
-    calib_start_toast:'Starting 4-corner calibration — gaze at each corner', calib_cam_first:'Please enable camera first',
+    calib_start_toast:'4-corner calibration started — gaze at each highlighted corner', calib_cam_first:'Please enable camera first',
     calib_load_fail:'Calibration module failed to load', calib_done_toast:'Calibration complete! Focus zone set.',
     calib_gaze_at:'Gaze at', calib_move_gaze:'Move gaze to corner…',
-    calib_stay_still:'Stay still, acquiring…', calib_processing:'Processing…',
+    calib_stay_still:'Hold still, acquiring…', calib_processing:'Processing…',
     calib_next_corner:'Turn to next corner', calib_acquired:'Acquired!',
+    calib_intro_title:'Calibration Guide',
+    calib_intro_msg:'Look at each highlighted screen corner in order. Hold your gaze steady for 1-2 seconds and the system will auto-capture.',
+    calib_corner_0:'Top Left', calib_corner_1:'Bottom Left', calib_corner_2:'Bottom Right', calib_corner_3:'Top Right',
+    calib_timeout_note:'Auto-capture timed out, forcing capture…',
     eye_relax:'👀 Look far away to relax your eyes',
     break_stop:'Stop', break_on:'On break...', break_set_time:'Set break time',
     break_started_ev:'Break started, monitoring paused', break_end_toast:'Break ended, resuming...',
@@ -321,7 +330,7 @@ function _openAbout() {
   fetch('/api/version').then(r => r.json()).then(d => {
     const v = document.getElementById('aboutVersion');
     const b = document.getElementById('aboutBuild');
-    if (v) v.textContent = 'v' + (d.version || '2.0');
+    if (v) v.textContent = 'V' + (d.version || '3.0');
     if (b) b.textContent = d.build_time || '—';
   }).catch(() => {});
 }
@@ -502,7 +511,7 @@ async function loadFromBackend() {
       if (cfg) {
         // 更新全局状态
         S.theme = cfg.theme || 'auto';
-        S.soundOn = cfg.sound_on || false;
+        S.soundOn = cfg.sound_on !== undefined ? cfg.sound_on : true;
         sensIdx = cfg.sens_idx !== undefined ? cfg.sens_idx : 1;
         localStorage.setItem('donotplay_sensIdx', sensIdx); // 持久化到本地
         S.cameraIndex = cfg.camera_index || 0;
@@ -520,7 +529,7 @@ async function loadFromBackend() {
           S.calibrated = true;
           const calBtn = document.getElementById('calibBtn');
           if (calBtn) {
-            calBtn.classList.add('active');
+            // calibBtn is NOT highlighted when already calibrated; only amber during active calibration
             const calStatus = document.getElementById('calibStatus');
             if (calStatus) calStatus.textContent = T('calib_inherited');
           }
@@ -597,7 +606,7 @@ function backfillUI() {
   applyTheme();
 
   // 恢复音量和灵敏度
-  S.soundOn = S.soundOn !== undefined ? S.soundOn : false;
+  S.soundOn = S.soundOn !== undefined ? S.soundOn : true;
   sensIdx = sensIdx || 1;
   const soundBtn = document.getElementById('soundBtn');
   if (soundBtn) soundBtn.querySelector('[data-i18n]')
@@ -703,54 +712,76 @@ document.addEventListener('click', () => {
   }
 }, { once: true });
 
-function playTone(freq, duration, type = 'sine', vol = 0.08) {
-  if (!S.soundOn || !audioUnlocked) return;
+// ─── Apple 风格音效引擎：三音阶钟声 + 200ms 淡入淡出 ADSR ───
+// 所有提示音节流：2 秒冷却防止噪音
+let _lastSoundAt = 0;
+function _throttleSound(minGapMs = 1500) {
+  const now = performance.now();
+  if (now - _lastSoundAt < minGapMs) return false;
+  _lastSoundAt = now;
+  return true;
+}
+
+function _ensureAudio() {
   if (!audioCtx) audioCtx = new AudioCtx();
   if (audioCtx.state === 'suspended') audioCtx.resume();
-  const osc = audioCtx.createOscillator();
-  const gain = audioCtx.createGain();
-  osc.type = type; osc.frequency.value = freq;
-  gain.gain.setValueAtTime(vol, audioCtx.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
-  osc.connect(gain); gain.connect(audioCtx.destination);
-  osc.start(); osc.stop(audioCtx.currentTime + duration);
+  return audioCtx;
 }
 
-function playFocusIn() { playTone(523.25, 0.1); setTimeout(() => playTone(659.25, 0.15), 120); } // C5 then E5 (柔和悦耳的提示音)
-function playDistractedTick() { playTone(300, 0.15, 'triangle', 0.08); setTimeout(() => playTone(250, 0.2, 'triangle', 0.08), 200); } // 温和的双音分心警报
-function playAlert() { playTone(800, 0.1, 'square', 0.15); setTimeout(() => playTone(800, 0.1, 'square', 0.15), 120); setTimeout(() => playTone(800, 0.1, 'square', 0.15), 240); } // 刺耳警告连击
-function playPostureWarn() { playTone(300, 0.25, 'triangle', 0.1); setTimeout(() => playTone(250, 0.3, 'triangle', 0.08), 200); }
-function playPostureGood() { playTone(600, 0.1, 'sine', 0.06); setTimeout(() => playTone(800, 0.1, 'sine', 0.05), 80); }
-
-function playPostureAlert() {
-  playTone(300, 0.2, 'triangle', 0.1);
-  setTimeout(() => playTone(300, 0.2, 'triangle', 0.1), 300);
-}
-
-function playDrowsyAlert() {
-  playTone(400, 0.4, 'sine', 0.1);
-  setTimeout(() => playTone(500, 0.4, 'sine', 0.1), 400);
-  setTimeout(() => playTone(600, 0.4, 'sine', 0.1), 800);
-}
-
-/**
- * 播放舒缓的提示音 (正弦波)
- */
-function playSoftAlert() {
-  if (!S.soundOn) return;
-  if (!audioCtx) audioCtx = new AudioCtx();
+// 单个音：正弦波 + 余弦包络 (pluck)，产生干净的 ding 感
+function _playDing(freq, startOffset, duration = 0.35, peakVol = 0.10) {
+  if (!audioCtx) return;
+  const t0 = audioCtx.currentTime + startOffset;
   const osc = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
   osc.type = 'sine';
-  osc.frequency.setValueAtTime(440, audioCtx.currentTime); // A4 440Hz
-  gain.gain.setValueAtTime(0, audioCtx.currentTime);
-  gain.gain.linearRampToValueAtTime(0.1, audioCtx.currentTime + 0.1);
-  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.8);
-  osc.connect(gain);
-  gain.connect(audioCtx.destination);
-  osc.start();
-  osc.stop(audioCtx.currentTime + 1.0);
+  osc.frequency.setValueAtTime(freq, t0);
+  // ADSR: 5ms attack, exponential release
+  gain.gain.setValueAtTime(0.0001, t0);
+  gain.gain.exponentialRampToValueAtTime(peakVol, t0 + 0.008);
+  gain.gain.exponentialRampToValueAtTime(0.0001, t0 + duration);
+  osc.connect(gain); gain.connect(audioCtx.destination);
+  osc.start(t0);
+  osc.stop(t0 + duration + 0.02);
 }
+
+function playTone(freq, duration, type = 'sine', vol = 0.08) {
+  // 兼容旧调用：单音回退
+  if (!S.soundOn || !audioUnlocked) return;
+  _ensureAudio();
+  _playDing(freq, 0, duration, vol);
+}
+
+// 三音阶 "Ding" 序列（苹果提示风）：80ms 间隔
+function _tripleDing(freqs, peakVol = 0.09) {
+  if (!S.soundOn || !audioUnlocked) return;
+  if (!_throttleSound()) return;
+  _ensureAudio();
+  _playDing(freqs[0], 0.00, 0.28, peakVol);
+  _playDing(freqs[1], 0.08, 0.30, peakVol);
+  _playDing(freqs[2], 0.16, 0.42, peakVol);
+}
+
+// 警告（下行，温和）：G5 → E5 → C5
+function playWarning()  { _tripleDing([784, 659, 523], 0.09); }
+// 恢复/专注开始（上行）：C5 → E5 → G5
+function playRecovery() { _tripleDing([523, 659, 784], 0.08); }
+// 轻柔双音：用于次要提醒（饮水、离开）
+function playSoftAlert() {
+  if (!S.soundOn || !audioUnlocked) return;
+  if (!_throttleSound(2500)) return;
+  _ensureAudio();
+  _playDing(659, 0.00, 0.35, 0.07);
+  _playDing(880, 0.10, 0.45, 0.06);
+}
+
+function playFocusIn()        { playRecovery(); }
+function playDistractedTick() { playWarning(); }
+function playAlert()          { playWarning(); }
+function playPostureWarn()    { playSoftAlert(); }   // 驼背用柔和提示，不用警告
+function playPostureGood()    { playRecovery(); }
+function playPostureAlert()   { playSoftAlert(); }
+function playDrowsyAlert()    { playSoftAlert(); }
 
 function _showShortRestToast() {
   // 显示20秒倒计时提示：看远方放松
@@ -805,12 +836,14 @@ let isCalibrating = false;
 
 // 四角校准顺序：左上→左下→右下→右上（顺时针一圈）
 const CALIB_CORNERS = [
-  { step: 0, label: '左上角', corner: 0 },
-  { step: 1, label: '左下角', corner: 1 },
-  { step: 2, label: '右下角', corner: 2 },
-  { step: 3, label: '右上角', corner: 3 },
+  { step: 0, labelKey: 'calib_corner_0', corner: 0 },
+  { step: 1, labelKey: 'calib_corner_1', corner: 1 },
+  { step: 2, labelKey: 'calib_corner_2', corner: 2 },
+  { step: 3, labelKey: 'calib_corner_3', corner: 3 },
 ];
 let _calibCornerResults = [];  // [{step, yaw, pitch}, ...]
+let _calibForceStep = -1;      // step currently being force-captured
+let _calibForceFallback = null; // timeout handle for force-capture
 
 function startCalibration() {
   if (!S.camOn) { showToast(T('calib_cam_first'), 'info'); return; }
@@ -819,11 +852,12 @@ function startCalibration() {
 
   _calibCornerResults = [];
   _calibWaitingStep = -1;
+  _calibForceStep = -1;
+  if (_calibForceFallback) { clearTimeout(_calibForceFallback); _calibForceFallback = null; }
   addEv(T('ev_calib_start'), 'i');
-  showToast(T('calib_start_toast'), 'info');
-  overlay.classList.add('on');
+  document.getElementById('calibBtn')?.classList.add('active');
 
-  // 重置所有角落和进度点状态
+  // Reset all corner states
   for (let i = 0; i < 4; i++) {
     const t = document.getElementById(`calibTarget${i}`);
     const d = document.getElementById(`calibDot${i}`);
@@ -831,7 +865,35 @@ function startCalibration() {
     if (d) { d.classList.remove('active', 'done'); d.textContent = '○'; }
   }
 
-  _runCalibCornerStep(0);
+  // Show intro panel, hide main step UI
+  const introEl = document.getElementById('calibIntro');
+  const mainEl  = document.getElementById('calibMain');
+  if (introEl) {
+    const tEl = document.getElementById('calibIntroTitle');
+    const mEl = document.getElementById('calibIntroMsg');
+    if (tEl) tEl.textContent = T('calib_intro_title');
+    if (mEl) mEl.textContent = T('calib_intro_msg');
+    introEl.style.display = 'flex';
+  }
+  if (mainEl) mainEl.style.display = 'none';
+  overlay.classList.add('on');
+
+  // 3-second countdown then start actual steps
+  let cnt = 3;
+  const cntEl = document.getElementById('calibIntroCountdown');
+  if (cntEl) cntEl.textContent = cnt;
+  const tick = setInterval(() => {
+    cnt--;
+    if (cnt > 0) {
+      if (cntEl) cntEl.textContent = cnt;
+    } else {
+      clearInterval(tick);
+      if (introEl) introEl.style.display = 'none';
+      if (mainEl) mainEl.style.display = 'flex';
+      showToast(T('calib_start_toast'), 'info');
+      _runCalibCornerStep(0);
+    }
+  }, 1000);
 }
 
 function _runCalibCornerStep(stepIdx) {
@@ -845,12 +907,13 @@ function _runCalibCornerStep(stepIdx) {
   const targetEl = document.getElementById(`calibTarget${c.corner}`);
   const dotEl    = document.getElementById(`calibDot${c.corner}`);
 
-  if (textEl) textEl.textContent = `${T('calib_gaze_at')} ${c.label}`;
+  if (textEl) textEl.textContent = `${T('calib_gaze_at')} ${T(c.labelKey)}`;
   if (countEl) countEl.textContent = T('calib_move_gaze');
   if (dotEl)   { dotEl.classList.add('active'); dotEl.textContent = '●'; }
   if (targetEl) targetEl.classList.add('active');
 
   clearInterval(calibTimer);
+  if (_calibForceFallback) { clearTimeout(_calibForceFallback); _calibForceFallback = null; }
 
   if (_ws && _ws.readyState === WebSocket.OPEN) {
     _ws.send(JSON.stringify({ cmd: 'start_corner_step', step: c.step }));
@@ -863,8 +926,46 @@ function _runCalibCornerStep(stepIdx) {
     }
   }, 750);
 
-  // 记录当前等待的步骤，等待后端 corner_calib_ready 通知
+  // 10-second force-capture fallback: if backend never sends corner_calib_ready
+  _calibForceFallback = setTimeout(() => {
+    _calibForceFallback = null;
+    if (_calibWaitingStep !== stepIdx) return;
+    const cEl = document.getElementById('calibCountdown');
+    if (cEl) cEl.textContent = T('calib_timeout_note');
+    _calibForceStep = stepIdx;
+    if (_ws && _ws.readyState === WebSocket.OPEN) {
+      _ws.send(JSON.stringify({ cmd: 'end_corner_step' }));
+    }
+    // Secondary fallback: if end_corner_step produces no result in 3s, advance anyway
+    setTimeout(() => {
+      if (_calibForceStep !== stepIdx) return; // already handled by corner_calib_result
+      _calibForceStep = -1;
+      if (!_calibCornerResults.find(r => r.step === c.step)) {
+        _calibCornerResults.push({ step: c.step, yaw: 0, pitch: 0 });
+      }
+      _advanceCalibCorner(stepIdx);
+    }, 3000);
+  }, 10000);
+
   _calibWaitingStep = stepIdx;
+}
+
+function _advanceCalibCorner(stepIdx) {
+  const c = CALIB_CORNERS[stepIdx];
+  const textEl   = document.getElementById('calibText');
+  const countEl  = document.getElementById('calibCountdown');
+  const targetEl = document.getElementById(`calibTarget${c.corner}`);
+  const dotEl    = document.getElementById(`calibDot${c.corner}`);
+
+  if (targetEl) { targetEl.classList.remove('active'); targetEl.classList.add('done'); }
+  if (dotEl)    { dotEl.classList.remove('active'); dotEl.classList.add('done'); dotEl.textContent = '✓'; }
+  if (textEl)   textEl.textContent = `✓ ${T(c.labelKey)} ${T('calib_acquired')}`;
+  if (countEl)  countEl.textContent = T('calib_next_corner');
+
+  _calibWaitingStep = -1;
+  if (_calibForceFallback) { clearTimeout(_calibForceFallback); _calibForceFallback = null; }
+  playRecovery();
+  setTimeout(() => _runCalibCornerStep(stepIdx + 1), 1200);
 }
 
 function _finalizeCornerCalib() {
@@ -874,24 +975,24 @@ function _finalizeCornerCalib() {
   if (textEl) textEl.textContent = T('calib_processing');
   if (countEl) countEl.textContent = '';
 
-  // 发送最终确认指令（含所有角落数据）
-  if (_ws && _ws.readyState === WebSocket.OPEN) {
-    _ws.send(JSON.stringify({
-      cmd: 'finalize_corner_calib',
-      corners: _calibCornerResults,
-      ear_baseline: S.calEAR || 0.28,
-      neck_baseline: S.calNeckLength || 0,
-    }));
-  }
-
+  // Wait 1.5s for any pending corner_calib_result from forced captures to arrive
   setTimeout(() => {
-    if (overlay) overlay.classList.remove('on');
-    S.calibrated = true;
-    // 从后端拉取最新基准值
-    fetch('/api/load-config')
-      .then(r => r.ok ? r.json() : null)
-      .then(cfg => {
-        if (cfg) {
+    if (_ws && _ws.readyState === WebSocket.OPEN) {
+      _ws.send(JSON.stringify({
+        cmd: 'finalize_corner_calib',
+        corners: _calibCornerResults,
+        ear_baseline: S.calEAR || 0.28,
+        neck_baseline: S.calNeckLength || 0,
+      }));
+    }
+
+    setTimeout(() => {
+      if (overlay) overlay.classList.remove('on');
+      S.calibrated = true;
+      fetch('/api/load-config')
+        .then(r => r.ok ? r.json() : null)
+        .then(cfg => {
+          if (cfg) {
           S.calYaw = cfg.baseline_yaw || 0;
           S.calPitch = cfg.baseline_pitch || 0;
           S.calEAR = cfg.baseline_ear || 0.28;
@@ -905,11 +1006,13 @@ function _finalizeCornerCalib() {
 
     const calStatus = document.getElementById('calibStatus');
     if (calStatus) calStatus.textContent = T('calib_done_status');
-    playTone(800, 0.2, 'sine', 0.1);
+    document.getElementById('calibBtn')?.classList.remove('active');
+    playRecovery();
     addEv(T('ev_calib_done'), 'i');
     showToast(T('calib_done_toast'), 'success');
     _calibCornerResults = [];
-  }, 500);
+    }, 500);
+  }, 1500);
 }
 
 /* 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲
@@ -944,9 +1047,14 @@ function toggleBreak() {
     }
     S.breakShown = false; // 重置休息提醒标记
 
-    document.querySelector('#breakStartBtn .md3-btn-text').textContent = T('break_stop');
-    document.querySelector('#breakStartBtn .md3-btn-icon').textContent = '🔔';
-    document.getElementById('breakStartBtn').classList.add('danger');
+    const btn2 = document.getElementById('breakStartBtn');
+    if (btn2) {
+      const txt2 = btn2.querySelector('.md3-btn-text') || btn2.querySelector('span[data-i18n="start"]') || btn2;
+      if (txt2 && txt2 !== btn2) txt2.textContent = T('break_stop');
+      else btn2.textContent = T('break_stop');
+      const ic2 = btn2.querySelector('.md3-btn-icon'); if (ic2) ic2.textContent = '🔔';
+      btn2.classList.add('danger');
+    }
     document.getElementById('breakStatus').textContent = T('break_on');
     addEv(T('break_started_ev'), 'i');
     // 显示休息遮罩
@@ -1015,15 +1123,22 @@ function endBreak() {
   if (_ws && _ws.readyState === WebSocket.OPEN) {
     _ws.send(JSON.stringify({ cmd: 'pause_monitoring', paused: false }));
   }
-  document.querySelector('#breakStartBtn .md3-btn-text').textContent = T('break_start_label');
-  document.querySelector('#breakStartBtn .md3-btn-icon').textContent = '☕';
-  document.getElementById('breakStartBtn').classList.remove('danger');
+  const btn = document.getElementById('breakStartBtn');
+  if (btn) {
+    const txt = btn.querySelector('.md3-btn-text') || btn.querySelector('span[data-i18n="start"]') || btn;
+    if (txt && txt !== btn) txt.textContent = T('break_start_label');
+    else btn.textContent = T('break_start_label');
+    const ic = btn.querySelector('.md3-btn-icon'); if (ic) ic.textContent = '☕';
+    btn.classList.remove('danger');
+  }
   document.getElementById('breakStatus').textContent = T('break_set_time');
   document.getElementById('breakTimer').textContent = '00:00';
   document.getElementById('breakArc').style.strokeDashoffset = 163.36;
   document.getElementById('pauseOverlay')?.classList.remove('on');
   S.lastChange = Date.now();
   addEv(T('break_end_ev'), 'i');
+  // 系统通知：休息结束
+  try { notifyOS('DoNotPlay 休息结束', '休息已完成，恢复专注吧！', 'w'); } catch(_){}
 }
 
 
@@ -1039,6 +1154,27 @@ function addEv(msg, type = 'i') {
   el.innerHTML = `<span class="ev-t">${t}</span><span class="ev-${type}">${msg}</span>`;
   list.prepend(el);
   if (list.children.length > 50) list.lastChild.remove();
+  // Windows 系统通知（仅 warning / error 弹出，避免正向事件打断专注）
+  if (type === 'w' || type === 'e') {
+    notifyOS('DoNotPlay', msg, type);
+  }
+}
+
+// ── Windows 系统通知 (pywebview 环境，统一走后端 PowerShell + WinRT) ──
+let _lastNotifyAt = 0;
+let _lastNotifyKey = '';
+function notifyOS(title, body, type = 'i') {
+  const now = Date.now();
+  const key = (title || '') + '|' + (body || '');
+  if (now - _lastNotifyAt < 1500) return;
+  if (key === _lastNotifyKey && now - _lastNotifyAt < 8000) return;
+  _lastNotifyAt = now;
+  _lastNotifyKey = key;
+  try {
+    if (_ws && _ws.readyState === WebSocket.OPEN) {
+      _ws.send(JSON.stringify({ cmd: 'notify_os', title: title || 'DoNotPlay', body: body || '', type }));
+    }
+  } catch (_) { /* ignore */ }
 }
 
 
@@ -1178,6 +1314,19 @@ function renderTimeline() {
     phone: { bg: '#e53935', lbl: T('tl_phone_lbl'), h: 80 }
   };
 
+  // 新数据从右侧出现：先在左侧填充占位条，再在右侧追加真实数据
+  const TOTAL_BARS = 30;
+  const need = TOTAL_BARS - S.tlData.length;
+  for (let i = 0; i < Math.max(0, need); i++) {
+    const ph = document.createElement('div');
+    ph.className = 'tl-bar tl-bar-placeholder';
+    ph.style.background = 'var(--bg3)';
+    ph.style.opacity = '0.35';
+    ph.style.height = '15%';
+    ph.title = T('tl_notstarted');
+    container.appendChild(ph);
+  }
+
   S.tlData.forEach(item => {
     const el = document.createElement('div');
     el.className = 'tl-bar';
@@ -1215,8 +1364,9 @@ function renderTimeline() {
 
       el.title = `${T('tl_time')} ${item.time}\n${T('tl_stats')} ${parts.join(', ')}`;
     } else {
-      el.style.background = 'transparent';
-      el.style.height = '0';
+      el.style.background = 'var(--bg3)';
+      el.style.height = '15%';
+      el.style.opacity = '0.5';
       el.title = T('tl_notstarted');
     }
 
@@ -1613,6 +1763,10 @@ function connectWebSocket() {
     S.warmupUntil = Date.now() + 5000; // 启动预热：5秒内不触发弹窗
     setStatus('active');
     sendSensUpdate();
+    // 关键修复：WS 重连后强制清除后端可能残留的 paused 状态（解决"休息模式：核心已关闭"卡死）
+    if (!breakTimerObj.active) {
+      try { _ws.send(JSON.stringify({ cmd: 'pause_monitoring', paused: false })); } catch(_){}
+    }
     // 关键修复：WS 连接成功即隐藏 noCam 遮罩（比 onload/handleBackendData 更可靠）
     const noCamEl = document.getElementById('noCam');
     if (noCamEl) noCamEl.style.display = 'none';
@@ -1636,35 +1790,24 @@ function connectWebSocket() {
           _calibCornerResults = _calibCornerResults.filter(c => c.step !== r.step);
           _calibCornerResults.push(r);
           console.log(`[CALIB-CORNER] 收到角落 ${r.step} 结果: yaw=${r.yaw}, pitch=${r.pitch}`);
+          // Advance UI if this was a force-captured step
+          if (_calibForceStep === r.step) {
+            _calibForceStep = -1;
+            const fi = CALIB_CORNERS.findIndex(c => c.step === r.step);
+            if (fi >= 0) _advanceCalibCorner(fi);
+          }
         }
         // 自动稳定就绪通知（backend 主动触发）
         if (data.corner_calib_ready) {
           const r = data.corner_calib_ready;
           _calibCornerResults = _calibCornerResults.filter(c => c.step !== r.step);
           _calibCornerResults.push(r);
-          // 通知后端停止本角落采集
           if (_ws && _ws.readyState === WebSocket.OPEN) {
             _ws.send(JSON.stringify({ cmd: 'end_corner_step' }));
           }
-          // 若当前正等待此步骤，执行 UI 反馈并自动推进
           if (_calibWaitingStep >= 0 && _calibWaitingStep < CALIB_CORNERS.length) {
             const stepIdx = _calibWaitingStep;
-            const c = CALIB_CORNERS[stepIdx];
-            const textEl   = document.getElementById('calibText');
-            const countEl  = document.getElementById('calibCountdown');
-            const targetEl = document.getElementById(`calibTarget${c.corner}`);
-            const dotEl    = document.getElementById(`calibDot${c.corner}`);
-            // 视觉标记完成
-            if (targetEl) { targetEl.classList.remove('active'); targetEl.classList.add('done'); }
-            if (dotEl)    { dotEl.classList.remove('active'); dotEl.classList.add('done'); dotEl.textContent = '✓'; }
-            if (textEl)   textEl.textContent = `✓ ${c.label} ${T('calib_acquired')}`;
-            if (countEl)  countEl.textContent = T('calib_next_corner');
-            // 声音提示
-            playTone(880, 0.12, 'sine', 0.1);
-            setTimeout(() => playTone(1100, 0.10, 'sine', 0.08), 150);
-            _calibWaitingStep = -1;
-            // 1.2s 后自动推进
-            setTimeout(() => _runCalibCornerStep(stepIdx + 1), 1200);
+            _advanceCalibCorner(stepIdx);
             console.log(`[CALIB-CORNER] 角落 ${r.step} 自动就绪: yaw=${r.yaw}, pitch=${r.pitch}`);
           }
         }
@@ -1940,8 +2083,15 @@ function handleBackendData(data) {
   }
   else if (status === 'distracted') {
     const today = ensureTodayStats();
-    if (S.status !== 'distracted') { addEv(T('ev_dist'), 'w'); }
+    if (S.status !== 'distracted') { addEv(T('ev_dist'), 'w'); S._distNotifyAcc = 0; }
     S.distMs += dt; today.distMs += dt; S.phaseDistMs += dt;
+    // 走神累计每满 1 分钟推一次系统通知
+    S._distNotifyAcc = (S._distNotifyAcc || 0) + dt;
+    if (S._distNotifyAcc >= 60000) {
+      S._distNotifyAcc -= 60000;
+      const mins = Math.floor(((S.phaseDistMs || 0) / 60000));
+      try { notifyOS('DoNotPlay 走神警告', `已连续走神累计 ${mins} 分钟，快回来专注！`, 'w'); } catch(_){}
+    }
   }
   else if (status === 'phone') {
     const today = ensureTodayStats();
@@ -1975,100 +2125,102 @@ function handleBackendData(data) {
     if (elPose) elPose.textContent = gaze_angle.yaw.toFixed(0) + ',' + gaze_angle.pitch.toFixed(0);
   }
 
-  // 5. 统一弹窗激活逻辑 (Popup State Sync)
+  // 5. 统一弹窗激活逻辑 (Popup State Sync) — 粘性版：抗闪烁
+  // 规则：弹窗一旦弹出至少保持 minVisibleMs；隐藏前需要"应该隐藏"信号稳定 hideDebounceMs
+  // 全局粘性辅助：返回 'shown' (本帧首次出现) | 'visible' | 'hidden' | 'kept' (条件false但仍粘住)
+  const _stickyPopup = (el, shouldShow, opts = {}) => {
+    if (!el) return 'hidden';
+    const { minVisibleMs = 2500, hideDebounceMs = 800 } = opts;
+    const t = Date.now();
+    el._stick = el._stick || { showAt: 0, falseSince: 0 };
+    if (shouldShow) {
+      el._stick.falseSince = 0;
+      if (!el.classList.contains('show')) {
+        el._stick.showAt = t;
+        el.classList.add('show');
+        return 'shown';
+      }
+      return 'visible';
+    } else {
+      if (!el._stick.falseSince) el._stick.falseSince = t;
+      if (el.classList.contains('show')) {
+        const visDur = t - (el._stick.showAt || t);
+        const falseDur = t - el._stick.falseSince;
+        if (visDur >= minVisibleMs && falseDur >= hideDebounceMs) {
+          el.classList.remove('show');
+          el._stick.showAt = 0;
+          el._stick.falseSince = 0;
+          return 'hidden';
+        }
+        return 'kept';
+      }
+      return 'hidden';
+    }
+  };
+
   // A. 手机预警（支持手动关闭后 5 秒冷却期）
   const phonePop = document.getElementById('doNotPlayPopup');
   if (phonePop) {
-    if (phoneAlertActive && now > (S._phoneDismissUntil || 0) && now > (S.warmupUntil || 0)) {
-      if (!phonePop.classList.contains('show')) {
-        phonePop.classList.add('show');
-        playAlert();
-        console.info('[UI-POPUP] 手机检测激活');
-      }
-    } else if (!phoneAlertActive) {
-      phonePop.classList.remove('show');
-    }
+    const want = phoneAlertActive && now > (S._phoneDismissUntil || 0) && now > (S.warmupUntil || 0);
+    const r = _stickyPopup(phonePop, want, { minVisibleMs: 2500, hideDebounceMs: 800 });
+    if (r === 'shown') { playAlert(); console.info('[UI-POPUP] 手机检测激活'); }
   }
 
-  // B. 分心预警（使用独立计时器 S.distractedSince，而非 streak 计时器）
+  // B. 分心预警（独立计时器 distractedSince，必须连续 5s）
   const distPop = document.getElementById('distractedWarningPopup');
   if (distPop) {
+    let want = false;
     if (status === 'distracted' && now > (S.warmupUntil || 0)) {
       if (S.status !== 'distracted') S.distractedSince = now;
-      if (!distPop.classList.contains('show') && S.distractedSince > 0 && (now - S.distractedSince > 5000) && now > (S._distractedDismissUntil || 0)) {
-        distPop.classList.add('show');
-        playDistractedTick();
-        console.info('[UI-POPUP] 分心预警激活');
+      if (S.distractedSince > 0 && (now - S.distractedSince > 5000) && now > (S._distractedDismissUntil || 0)) {
+        want = true;
       }
     } else {
-      distPop.classList.remove('show');
       S.distractedSince = 0;
     }
+    const r = _stickyPopup(distPop, want, { minVisibleMs: 3000, hideDebounceMs: 1000 });
+    if (r === 'shown') { playDistractedTick(); console.info('[UI-POPUP] 分心预警激活'); }
   }
 
-  // C. 离开预警 (完全由后端 status 字段驱动，消除 personDetected/poseValid 导致的误判)
+  // C. 离开预警 (后端 status 字段驱动)
   const awayPop = document.getElementById('awayWarningPopup');
-  if (status === 'away' && now > (S.warmupUntil || 0)) {
-    if (awayPop && !awayPop.classList.contains('show')) {
-      awayPop.classList.add('show');
-      S.awayAlertActive = true;
-      playSoftAlert();
-      console.info('[UI-POPUP] 离开预警激活 (后端状态驱动)');
-    }
-  } else if (status !== 'away') {
-    if (awayPop && awayPop.classList.contains('show')) {
-      awayPop.classList.remove('show');
-      S.awayAlertActive = false;
-      S.lastFace = now;
-      console.info('[UI-POPUP] 离开预警清除：用户已返回');
-    }
+  if (awayPop) {
+    const want = (status === 'away' && now > (S.warmupUntil || 0));
+    const r = _stickyPopup(awayPop, want, { minVisibleMs: 3000, hideDebounceMs: 1500 });
+    if (r === 'shown') { S.awayAlertActive = true; playSoftAlert(); console.info('[UI-POPUP] 离开预警激活'); }
+    else if (r === 'hidden' && S.awayAlertActive) { S.awayAlertActive = false; S.lastFace = now; console.info('[UI-POPUP] 离开预警清除'); }
   }
 
-  // D. 姿态预警 (驼背) — 需持续 10 秒驼背才弹窗，避免偶尔低头误触
+  // D. 姿态预警 (持续 10s 驼背)
   const postPop = document.getElementById('postureWarningPopup');
   if (postPop) {
+    let want = false;
     if (isSlouching && status !== 'away' && now > (S.warmupUntil || 0)) {
       if (!S._slouchSince) S._slouchSince = now;
-      const slouchDuration = now - S._slouchSince;
-      if (slouchDuration > 10000 && now > (S._postureDismissUntil || 0)) {
-        if (!postPop.classList.contains('show')) {
-          postPop.classList.add('show');
-          playPostureWarn();
-          console.info('[UI-POPUP] 姿势预警激活 (持续驼背 >10s)');
-        }
-      }
+      if ((now - S._slouchSince) > 10000 && now > (S._postureDismissUntil || 0)) want = true;
     } else {
       S._slouchSince = 0;
-      postPop.classList.remove('show');
     }
+    const r = _stickyPopup(postPop, want, { minVisibleMs: 4000, hideDebounceMs: 1500 });
+    if (r === 'shown') { playPostureWarn(); console.info('[UI-POPUP] 姿势预警激活'); }
   }
 
   // E. 连续用眼 60 分钟警告
   const drowsyPop = document.getElementById('drowsyWarningPopup');
   if (drowsyPop) {
-    if (S.eyeNeedLongRest && status !== 'away' && now > (S.warmupUntil || 0) && now > (S._drowsyDismissUntil || 0) && !S._fatigueDisabledForSession) {
-      if (!drowsyPop.classList.contains('show')) {
-        drowsyPop.classList.add('show');
-        playDrowsyAlert();
-        console.info('[UI-POPUP] 连续用眼60分钟预警激活');
-      }
-    } else if (!S.eyeNeedLongRest || status === 'away') {
-      drowsyPop.classList.remove('show');
-    }
+    const want = (S.eyeNeedLongRest && status !== 'away' && now > (S.warmupUntil || 0)
+                  && now > (S._drowsyDismissUntil || 0) && !S._fatigueDisabledForSession);
+    const r = _stickyPopup(drowsyPop, want, { minVisibleMs: 4000, hideDebounceMs: 1500 });
+    if (r === 'shown') { playDrowsyAlert(); console.info('[UI-POPUP] 连续用眼60分钟预警激活'); }
   }
 
   // F. 饮水提醒 — 仅在用户在场 (非 away) 时提醒
   const waterPop = document.getElementById('waterWarningPopup');
-  if (S.hydrationMinutes > 60 && status !== 'away' && now > (S.warmupUntil || 0)) {
-    if (!waterPop.classList.contains('show') && !S.waterAlertShown) {
-      waterPop.classList.add('show');
-      S.waterAlertShown = true;
-      playSoftAlert();
-      console.info('[UI-POPUP] 饮水预警激活');
-    }
-  } else {
-    waterPop.classList.remove('show');
-    S.waterAlertShown = false;
+  if (waterPop) {
+    const want = (S.hydrationMinutes > 60 && status !== 'away' && now > (S.warmupUntil || 0) && !S.waterAlertShown);
+    const r = _stickyPopup(waterPop, want, { minVisibleMs: 4000, hideDebounceMs: 1500 });
+    if (r === 'shown') { S.waterAlertShown = true; playSoftAlert(); console.info('[UI-POPUP] 饮水预警激活'); }
+    else if (r === 'hidden') { S.waterAlertShown = false; }
   }
 
   // 6. 状态同步到仪表盘
@@ -2119,8 +2271,8 @@ function _playBeep(freq, dur, vol) {
 }
 
 function _startDistSound() {
-  _playBeep(880, 0.12, 0.12);
-  _distSoundTimer = setInterval(() => _playBeep(880, 0.12, 0.12), 2000);
+  // 优化：只在进入走神状态时响一次，避免每 2s 重复刷屏
+  playWarning();
 }
 
 function _stopDistSound() {
@@ -2150,11 +2302,15 @@ function renderWinActivity(wa) {
   const st = wa.state || 'unknown';
   if (_lastWaState !== null && _lastWaState !== st) {
     if (st === 'distracted') { _stopDistSound(); _startDistSound(); }
-    else { _stopDistSound(); if (_lastWaState === 'distracted') _playBeep(660, 0.28, 0.09); }
+    else { _stopDistSound(); if (_lastWaState === 'distracted') playRecovery(); }
   }
   _lastWaState = st;
   chip.className = 'wa-chip wa-' + st;
-  chip.textContent = st === 'focus' ? T('st_focus') : st === 'distracted' ? T('st_distracted_short') : T('st_unknown');
+  const stTxt = st === 'focus' ? '✅ 专注'
+              : st === 'distracted' ? '🚫 走神'
+              : st === 'neutral' ? '⚪ 中性'
+              : '❓ 待定';
+  chip.textContent = stTxt;
 
   if (procEl)  procEl.textContent  = wa.proc  || '—';
   if (titleEl) titleEl.textContent = wa.title || T('win_waiting');
@@ -2237,8 +2393,271 @@ async function _classifyWin(id, state) {
     _waCache.lastUnknownFetch = 0;
     _fetchWinToday();
     _fetchWinUnknown();
-    _renderWinLog();
+    _renderWinV3();
   } catch (_) { /* silent */ }
+}
+
+// ════════════════════════════════════════════════════════════════
+//  v3 窗口面板：三色统计 / Top5 双栏 / 待分类拨杆 / 分心提醒
+// ════════════════════════════════════════════════════════════════
+
+function _fmtMin(sec) {
+  sec = Math.max(0, Math.round(sec || 0));
+  if (sec < 60) return sec + 's';
+  if (sec < 3600) return Math.round(sec / 60) + 'm';
+  const h = Math.floor(sec / 3600);
+  const m = Math.round((sec % 3600) / 60);
+  return h + 'h' + (m ? m + 'm' : '');
+}
+
+function _stateZh(s) {
+  return s === 'focus' ? '专注' : s === 'distracted' ? '走神' :
+         s === 'neutral' ? '中性' : '待定';
+}
+
+async function _fetchWinV3Stats() {
+  try {
+    const r = await fetch('/api/window/stats_today');
+    if (!r.ok) return;
+    const d = await r.json();
+    const total = Math.max(1, d.total || 0);
+    const segs = [
+      ['waSegFocus', 'waStatFocus', d.focus],
+      ['waSegDist',  'waStatDist',  d.distracted],
+      ['waSegNeu',   'waStatNeu',   d.neutral],
+      ['waSegUnk',   'waStatUnk',   d.unknown],
+    ];
+    for (const [segId, lblId, sec] of segs) {
+      const seg = document.getElementById(segId);
+      const lbl = document.getElementById(lblId);
+      if (seg) seg.style.width = ((sec / total) * 100).toFixed(1) + '%';
+      if (lbl) lbl.textContent = _fmtMin(sec);
+    }
+  } catch (_) {}
+}
+
+async function _fetchWinV3Top() {
+  try {
+    const r = await fetch('/api/window/top?n=5');
+    if (!r.ok) return;
+    const d = await r.json();
+    const render = (items, mountId) => {
+      const el = document.getElementById(mountId);
+      if (!el) return;
+      if (!items.length) {
+        el.innerHTML = '<div class="wa-top-empty">— 暂无 —</div>';
+        return;
+      }
+      const max = Math.max(1, items[0].total);
+      el.innerHTML = items.map(it => {
+        const w = ((it.total / max) * 100).toFixed(0);
+        const titleStr = (it.sample_titles || []).slice(0, 3)
+          .map(s => `${s.title.replace(/</g,'&lt;')} (${_fmtMin(s.sec)})`).join('\n');
+        const safeName = (it.display || '').replace(/</g,'&lt;');
+        const safeProc = (it.proc_raw || '').replace(/'/g,"\\'");
+        return `<div class="wa-top-row" title="${titleStr}">
+          <span class="wa-top-name">${safeName}</span>
+          <div class="wa-top-bar"><div class="wa-top-fill" style="width:${w}%"></div></div>
+          <span class="wa-top-dur">${_fmtMin(it.total)}</span>
+          <span class="wa-top-acts">
+            <button class="wa-mini wa-mini-f" title="标记专注" onclick="_classifyDisplay('${safeName.replace(/'/g,"\\'")}','${safeProc}','focus')">F</button>
+            <button class="wa-mini wa-mini-d" title="标记走神" onclick="_classifyDisplay('${safeName.replace(/'/g,"\\'")}','${safeProc}','distracted')">D</button>
+            <button class="wa-mini wa-mini-n" title="标记中性/重置" onclick="_classifyDisplay('${safeName.replace(/'/g,"\\'")}','${safeProc}','neutral')">N</button>
+          </span>
+        </div>`;
+      }).join('');
+    };
+    render(d.focus || [], 'waTopFocus');
+    render(d.distracted || [], 'waTopDist');
+  } catch (_) {}
+}
+
+async function _classifyDisplay(display, proc, state, kind) {
+  try {
+    await fetch('/api/window/classify_display', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ display, proc, state, kind })
+    });
+    _renderWinV3();
+    _renderAllRules();
+  } catch (_) {}
+}
+
+function _toggleSec(panelId) {
+  const p = document.getElementById(panelId);
+  const arr = document.getElementById(panelId + 'Arr');
+  if (!p) return;
+  const isOpen = p.style.display !== 'none' && !p.hasAttribute('data-user-collapsed');
+  if (isOpen) {
+    p.style.display = 'none';
+    p.setAttribute('data-user-collapsed', '');
+  } else {
+    p.style.display = '';
+    p.removeAttribute('data-user-collapsed');
+  }
+  if (arr) arr.textContent = isOpen ? '▸' : '▾';
+  if (!isOpen) {
+    if (panelId === 'wlRules') { _renderAllRules(); _initRuleTabs(); }
+  }
+}
+
+// ── Bento 单一右侧抽屉（合并：摄像头 + 窗口监测 + 日志） ──
+function _initDrawer() {
+  const bodyR = document.getElementById('drawerBody');
+  if (bodyR) {
+    // 摄像头面板优先排在最前面
+    document.querySelectorAll('[data-drawer-item-left]').forEach(el => {
+      if (el.parentElement !== bodyR) bodyR.appendChild(el);
+    });
+    document.querySelectorAll('[data-drawer-item]').forEach(el => {
+      if (el.parentElement !== bodyR) bodyR.appendChild(el);
+    });
+    // 移入抽屉后强制重连摄像头流（DOM 重 parent 会断开 MJPEG 流）
+    setTimeout(() => {
+      const vs = document.getElementById('vid_stream');
+      if (vs) vs.src = '/video_feed?t=' + Date.now();
+      // 规则总表默认展开时主动渲染一次
+      try { _renderAllRules(); _initRuleTabs(); } catch(_) {}
+    }, 100);
+  }
+  const btnR = document.getElementById('drawerBtn');
+  const btnL = document.getElementById('drawerLeftBtn');
+  const btnM = document.getElementById('menuBtn');
+  if (btnR) btnR.onclick = () => _toggleDrawer();
+  if (btnL) btnL.onclick = () => _toggleDrawer();
+  if (btnM) btnM.onclick = () => _toggleDrawer();
+  // 点校准时自动呼出抽屉（避免看不到摄像头校准透视）
+  const calibBtn = document.getElementById('calibBtn');
+  if (calibBtn) calibBtn.addEventListener('click', () => _toggleDrawer(true), true);
+}
+function _toggleDrawer(force) {
+  const d = document.getElementById('drawer');
+  const m = document.getElementById('drawerMask');
+  if (!d) return;
+  const willOpen = (typeof force === 'boolean') ? force : !d.classList.contains('open');
+  d.classList.toggle('open', willOpen);
+  if (m) m.classList.toggle('show', willOpen);
+  if (willOpen) {
+    try { _renderAllRules(); } catch(_) {}
+    const vs = document.getElementById('vid_stream');
+    if (vs && !vs.src) vs.src = '/video_feed?t=' + Date.now();
+  }
+}
+function _toggleDrawerLeft(force) { _toggleDrawer(force); }
+function _anyDrawerOpen() {
+  const a = document.getElementById('drawer');
+  return !!(a && a.classList.contains('open'));
+}
+function _closeAllDrawers() { _toggleDrawer(false); }
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', _initDrawer);
+} else {
+  _initDrawer();
+}
+
+// ── 完整规则总表（程序 / 网站，每条可拨档；固定仅今日）──
+async function _renderAllRules() {
+  try {
+    const r = await fetch('/api/window/all_rules?today_only=1');
+    if (!r.ok) return;
+    const d = await r.json();
+    _drawRuleList('wlRuleProc', d.procs || [], 'proc');
+    _drawRuleList('wlRuleSite', d.sites || [], 'site');
+  } catch (_) {}
+}
+
+function _drawRuleList(mountId, items, kind) {
+  const el = document.getElementById(mountId);
+  if (!el) return;
+  if (!items.length) {
+    el.innerHTML = '<div class="wa-rules-empty">— 暂无规则 —</div>';
+    return;
+  }
+  // 按 state 分组
+  const groups = { focus: [], distracted: [], neutral: [], unknown: [] };
+  for (const it of items) (groups[it.state] || (groups[it.state] = [])).push(it);
+  const gHead = (s) => s === 'focus' ? '✅ 专注' : s === 'distracted' ? '🚫 走神' : s === 'neutral' ? '⚪ 中性' : '❓ 待分类（今日访问过）';
+  const gColor = (s) => s === 'focus' ? '#22c55e' : s === 'distracted' ? '#f97316' : s === 'neutral' ? '#94a3b8' : '#a78bfa';
+
+  let html = '';
+  for (const st of ['unknown', 'focus', 'distracted', 'neutral']) {
+    const arr = groups[st] || [];
+    if (!arr.length) continue;
+    html += `<div class="wa-rules-group">
+      <div class="wa-rules-ghead" style="color:${gColor(st)}">${gHead(st)}（${arr.length}）</div>`;
+    for (const it of arr) {
+      const keyEsc = (it.key || '').replace(/'/g, "\\'");
+      const display = (it.display || it.key || '').replace(/</g, '&lt;');
+      const exe = (it.exe || it.key || '').replace(/'/g, "\\'");
+      const argProc = kind === 'proc' ? exe : '';
+      // 三色按钮：当前 state 高亮
+      const btn = (s, lbl, cls) => `<button class="wa-rule-btn ${cls} ${it.state === s ? 'on' : ''}"
+        onclick="_classifyDisplay('${keyEsc}','${argProc}','${s}','${kind}')">${lbl}</button>`;
+      html += `<div class="wa-rule-row">
+        <span class="wa-rule-name">${display}<span class="wa-rule-key">${(it.key||'').replace(/</g,'&lt;')}</span></span>
+        <span class="wa-rule-acts">${btn('focus','F','wa-rule-f')}${btn('distracted','D','wa-rule-d')}${btn('neutral','N','wa-rule-n')}</span>
+      </div>`;
+    }
+    html += '</div>';
+  }
+  el.innerHTML = html;
+}
+
+function _initRuleTabs() {
+  const rtabs = document.querySelectorAll('.wl-rtab');
+  if (!rtabs.length) return;
+  if (!rtabs[0].dataset.bound) {
+    rtabs.forEach(btn => {
+      btn.dataset.bound = '1';
+      btn.addEventListener('click', () => {
+        rtabs.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const isProc = btn.dataset.rt === 'proc';
+        document.getElementById('wlRuleProc')?.classList.toggle('hidden', !isProc);
+        document.getElementById('wlRuleSite')?.classList.toggle('hidden', isProc);
+      });
+    });
+  }
+}
+
+function _renderWinV3() {
+  _fetchWinV3Stats();
+  _fetchWinV3Top();
+  // 若规则面板展开，也刷新
+  const r = document.getElementById('wlRules');
+  if (r && r.style.display !== 'none') _renderAllRules();
+}
+
+// ── 分心应用 >60s 弹窗（v3）──
+let _winDistAlertState = { dismissedUntil: 0, lastDisplay: '' };
+
+async function _checkDistractedAlert() {
+  try {
+    const r = await fetch('/api/window/distracted_alert');
+    if (!r.ok) return;
+    const d = await r.json();
+    const pop = document.getElementById('winDistractedPopup');
+    if (!pop) return;
+    const now = Date.now();
+    // Reset dismissal if window changed
+    if (d.display && d.display !== _winDistAlertState.lastDisplay) {
+      _winDistAlertState.lastDisplay = d.display;
+      _winDistAlertState.dismissedUntil = 0;
+    }
+    if (d.should_alert && now > _winDistAlertState.dismissedUntil) {
+      const nameEl = document.getElementById('winDistAppName');
+      const durEl  = document.getElementById('winDistDur');
+      if (nameEl) nameEl.textContent = d.display || d.title || '该应用';
+      if (durEl)  durEl.textContent  = d.stay_sec;
+      if (!pop.classList.contains('show')) {
+        pop.classList.add('show');
+        try { playWarning && playWarning(); } catch (_) {}
+      }
+    } else if (!d.should_alert) {
+      pop.classList.remove('show');
+    }
+  } catch (_) {}
 }
 
 // ── 窗口日志 Tab ──────────────────────────────────────────────
@@ -2291,23 +2710,23 @@ async function _renderWinLog() {
     const dur  = row.duration >= 60
       ? `${Math.floor(row.duration / 60)}m`
       : `${Math.round(row.duration)}s`;
-    const name  = (row.proc_name || '').replace(/\.exe$/i, '');
+    const name  = row.display_name || (row.proc_name || '').replace(/\.exe$/i, '');
     const title = (row.title || '').slice(0, 30);
     const stClass = row.state === 'focus' ? 'wl-focus' : row.state === 'distracted' ? 'wl-dist' : 'wl-unk';
-    const stLabel = row.state === 'focus' ? T('st_focus') : row.state === 'distracted' ? T('st_distracted_short') : '?';
-    const unkLabel = _lang === 'zh' ? '未知 ▾' : 'Unknown ▾';
+    const stLabel = row.state === 'focus' ? T('st_focus') : row.state === 'distracted' ? T('st_distracted_short') : (_lang === 'zh' ? '未知' : 'Unknown');
+    const tipTxt  = _lang === 'zh' ? '点击更改' : 'Click to change';
     const focusLbl = T('st_focus');
     const distLbl  = T('st_distracted_short');
-    const btns = row.state === 'unknown'
-      ? `<span class="wl-unk-ctrl" id="wlCtrl_${row.id}">
-           <span class="wl-tag wl-unk wl-tag-sm wl-classify-trigger" onclick="_toggleClassify(${row.id})" title="${_lang === 'zh' ? '点击分类' : 'Classify'}">${unkLabel}</span>
-           <span class="wl-classify-btns" style="display:none;gap:3px">
-             <button class="wl-btn wl-btn-f" onclick="event.stopPropagation();_classifyWin(${row.id},'focus')">${focusLbl}</button>
-             <button class="wl-btn wl-btn-d" onclick="event.stopPropagation();_classifyWin(${row.id},'distracted')">${distLbl}</button>
-           </span>
-         </span>`
-      : `<span class="wl-tag ${stClass} wl-tag-sm">${stLabel}</span>`;
-    return `<div class="wl-row">
+    // All states are editable: show clickable tag that expands to buttons
+    const btns = `<span class="wl-unk-ctrl" id="wlCtrl_${row.id}">
+         <span class="wl-tag ${stClass} wl-tag-sm wl-classify-trigger" onclick="_toggleClassify(${row.id})" title="${tipTxt}">${stLabel} ▾</span>
+         <span class="wl-classify-btns" style="display:none;gap:3px">
+           <button class="wl-btn wl-btn-f" onclick="event.stopPropagation();_classifyWin(${row.id},'focus')">${focusLbl}</button>
+           <button class="wl-btn wl-btn-d" onclick="event.stopPropagation();_classifyWin(${row.id},'distracted')">${distLbl}</button>
+         </span>
+       </span>`;
+    const rowClass = row.state === 'focus' ? 'wl-row-focus' : row.state === 'distracted' ? 'wl-row-dist' : 'wl-row-unk';
+    return `<div class="wl-row ${rowClass}">
       <span class="wl-time">${t}</span>
       <span class="wl-name">${name}</span>
       <span class="wl-title" title="${row.title}">${title}</span>
@@ -2374,45 +2793,34 @@ function _toggleClassify(id) {
 }
 
 function _initWinLog() {
-  // Main subtabs (使用记录 / 规则管理)
-  const btns = document.querySelectorAll('.wl-stab');
-  btns.forEach(btn => {
-    btn.addEventListener('click', () => {
-      btns.forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      document.querySelectorAll('.wl-subpanel').forEach(p => p.classList.add('hidden'));
-      const target = document.getElementById(btn.dataset.panel);
-      if (target) {
-        target.classList.remove('hidden');
-        if (btn.dataset.panel === 'wlRecord') _renderWinLog();
-        if (btn.dataset.panel === 'wlRules') { _renderRules(); _initRuleTabs(); }
-      }
-    });
-  });
-  // Auto-refresh log every 30s when visible
+  // v4: 启动时直接渲染新面板
+  _renderWinV3();
+
+  // 自动刷新：v3 面板 5s（含统计/Top/Pending/规则总表）
+  setInterval(_renderWinV3, 5000);
+
+  // 规则总表面板若展开，单独 3s 自动刷新（捕捉新出现的域名）
   setInterval(() => {
-    const rec = document.getElementById('wlRecord');
-    if (rec && !rec.classList.contains('hidden')) _renderWinLog();
-  }, 30000);
-  // Initial load
-  _renderWinLog();
+    const r = document.getElementById('wlRules');
+    if (r && r.style.display !== 'none') _renderAllRules();
+  }, 3000);
+
+  // 分心提醒轮询（每 5s 一次）
+  setInterval(_checkDistractedAlert, 5000);
+
+  // 分心弹窗按钮
+  const okBtn   = document.getElementById('winDistOkBtn');
+  const keepBtn = document.getElementById('winDistKeepBtn');
+  const closeAll = (mins) => {
+    document.getElementById('winDistractedPopup')?.classList.remove('show');
+    _winDistAlertState.dismissedUntil = Date.now() + mins * 60 * 1000;
+  };
+  if (okBtn)   okBtn.addEventListener('click', () => closeAll(2));
+  if (keepBtn) keepBtn.addEventListener('click', () => closeAll(5));
 }
 
-function _initRuleTabs() {
-  const rtabs = document.querySelectorAll('.wl-rtab');
-  if (!rtabs.length) return;
-  // Only bind once
-  if (rtabs[0].dataset.bound) return;
-  rtabs.forEach(btn => {
-    btn.dataset.bound = '1';
-    btn.addEventListener('click', () => {
-      rtabs.forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      document.querySelectorAll('.wl-ruleset').forEach(p => p.classList.add('hidden'));
-      const target = document.getElementById(btn.dataset.rt === 'proc' ? 'wlRuleProc' : 'wlRuleTitle');
-      if (target) target.classList.remove('hidden');
-    });
-  });
+function _initRuleTabs_LEGACY_REMOVED() {
+  // 旧版已被 v4 版本替代（参见上方），保留空函数避免外部引用报错
 }
 
 const on = (id, evt, fn) => {
@@ -2422,18 +2830,10 @@ const on = (id, evt, fn) => {
 };
 
 document.addEventListener('DOMContentLoaded', () => {
-  on('sensBtn', 'click', () => {
-    sensIdx = (sensIdx + 1) % 4;
-    localStorage.setItem('donotplay_sensIdx', sensIdx);
-    const btn = document.getElementById('sensBtn');
-    if (btn) btn.textContent = (T('sens_btn').split(':')[0]) + ': ' + T('sens_' + sensIdx);
-    sendSensUpdate();
-    saveConfigToBackend(); // 同步到后端
-  });
+  on('calibBtn', 'click', startCalibration);
   on('camBtn', 'click', () => { connectWebSocket(); initCam(); });
   on('soundBtn', 'click', toggleSound);
   on('themeBtn', 'click', toggleTheme);
-  on('refreshBtn', 'click', refreshApp);
   on('langBtn', 'click', toggleLang);
   on('aboutBtn', 'click', _openAbout);
   on('doNotPlayDismissBtn', 'click', () => { S.phoneAlertActive = false; S._phoneDismissUntil = Date.now() + 5000; document.getElementById('doNotPlayPopup')?.classList.remove('show'); });
@@ -2473,7 +2873,24 @@ document.addEventListener('DOMContentLoaded', () => {
   applyTheme();
   applyLang();
   _initWinLog();
+  _initGoalTabs();
 });
+
+// 目标 tab 切换（每日/本次/休息）
+function _initGoalTabs() {
+  const tabs = document.querySelectorAll('.goal-tab');
+  if (!tabs.length) return;
+  tabs.forEach(t => {
+    t.addEventListener('click', () => {
+      const k = t.dataset.gt;
+      tabs.forEach(x => x.classList.toggle('active', x === t));
+      ['daily', 'session', 'break'].forEach(name => {
+        const p = document.getElementById('goalPane_' + name);
+        if (p) p.style.display = (name === k) ? '' : 'none';
+      });
+    });
+  });
+}
 
 async function start() {
   if (S.booted) {
@@ -2573,6 +2990,8 @@ function toggleRotation() {
   saveConfigToBackend();
   showToast(T('rotate_toast') + ' ' + S.cameraRotation + T('rotate_degrees'), 'info');
 }
+
+// ── Keyboard Shortcuts (已按用户要求全部移除) ───────────────
 
 // 健壮的启动逻辑：兼容 DOM 已加载或未加载的情况
 if (document.readyState === 'complete' || document.readyState === 'interactive') {

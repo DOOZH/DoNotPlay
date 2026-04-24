@@ -114,6 +114,7 @@ body {
   overflow: hidden;
   -webkit-font-smoothing: antialiased;
   transition: background 0.4s ease, color 0.4s ease;
+  font-size: 13px;
 }
 
 body * {
@@ -125,8 +126,8 @@ body * {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 20px;
-  min-height: 56px;
+  padding: 0 14px;
+  min-height: 44px;
   background: var(--bg2);
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
@@ -137,12 +138,12 @@ body * {
 .hdr-brand {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
 }
 
 .hdr-brand span {
   font-weight: 500;
-  font-size: 14px;
+  font-size: 13px;
   letter-spacing: 0.1em;
   color: var(--text);
 }
@@ -150,7 +151,7 @@ body * {
 .hdr-right {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
   flex-wrap: wrap;
 }
 
@@ -184,7 +185,7 @@ body * {
   background: var(--bg3);
   color: var(--text);
   border: 1px solid transparent;
-  padding: 6px 14px;
+  padding: 4px 10px;
   border-radius: var(--radius-pill);
   cursor: pointer;
   font-size: 11px;
@@ -289,10 +290,10 @@ body * {
   display: flex;
   flex-direction: column;
   background: var(--bg);
-  width: min(340px, 35vw);
+  width: min(300px, 30vw);
   flex-shrink: 0;
   overflow-y: auto;
-  gap: 12px;
+  gap: 8px;
 }
 
 .cam-view {
@@ -332,11 +333,11 @@ body * {
 
 .cam-corners .brk {
   position: absolute;
-  width: 24px;
-  height: 24px;
-  border-color: rgba(244, 180, 81, 0.6);
+  width: 18px;
+  height: 18px;
+  border-color: rgba(148, 163, 184, 0.35); /* slate-400 低饱和 */
   border-style: solid;
-  border-radius: 4px;
+  border-radius: 3px;
 }
 
 .brk.tl {
@@ -430,7 +431,7 @@ body * {
 /* 四角目标点 */
 .calib-corner-target {
   position: absolute;
-  font-size: 32px;
+  font-size: 22px;
   color: rgba(255,255,255,0.25);
   line-height: 1;
   transition: color 0.3s, transform 0.3s, text-shadow 0.3s;
@@ -470,15 +471,15 @@ body * {
 .calib-dot.active { color: var(--amber); }
 
 .calib-ring {
-  width: 90px;
-  height: 90px;
+  width: 60px;
+  height: 60px;
   border: 3px solid var(--amber);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   animation: pulse 1.5s ease infinite;
-  box-shadow: 0 0 20px rgba(244, 180, 81, 0.3);
+  box-shadow: 0 0 14px rgba(244, 180, 81, 0.3);
 }
 
 .calib-ring-inner {
@@ -503,7 +504,7 @@ body * {
 }
 
 .calib-text {
-  font-size: 14px;
+  font-size: 12px;
   color: #fff;
   text-align: center;
   font-weight: 500;
@@ -511,59 +512,125 @@ body * {
 
 .calib-countdown {
   font-family: var(--sans);
-  font-size: 42px;
+  font-size: 24px;
   font-weight: 300;
   color: var(--amber);
 }
 
-/* Posture Indicator */
+/* Calibration intro panel */
+.calib-intro-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  background: rgba(10, 10, 20, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 12px;
+  padding: 14px 16px;
+  max-width: 210px;
+  text-align: center;
+  z-index: 2;
+}
+.calib-intro-icon { font-size: 24px; }
+.calib-intro-title { font-size: 13px; font-weight: 700; color: #fff; }
+.calib-intro-msg { font-size: 10px; color: rgba(255,255,255,0.72); line-height: 1.5; }
+.calib-intro-cntd { font-size: 32px; font-weight: 300; color: var(--amber); line-height: 1.1; }
+
+/* Posture Indicator — 低饱和青灰胶囊 */
 .posture-indicator {
   position: absolute;
-  top: 16px;
+  top: 12px;
   left: 50%;
   transform: translateX(-50%);
   font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  padding: 4px 14px;
-  background: rgba(0, 0, 0, 0.8);
-  border: 1px solid var(--green);
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  padding: 3px 10px;
+  background: rgba(15, 23, 42, 0.55); /* slate-900/55 */
+  border: 1px solid rgba(148, 163, 184, 0.35);
   border-radius: var(--radius-pill);
-  color: var(--green);
+  color: rgba(203, 213, 225, 0.92); /* slate-300 */
   display: none;
-  box-shadow: var(--shadow-2);
-  backdrop-filter: blur(4px);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(6px);
 }
 
 .posture-indicator.warn {
-  border-color: var(--amber);
-  color: var(--amber);
+  border-color: rgba(202, 138, 4, 0.45); /* amber-600 低饱和 */
+  color: rgba(234, 179, 8, 0.85);
 }
 
 .posture-indicator.bad {
-  border-color: var(--red-d);
-  color: var(--red-d);
+  border-color: rgba(190, 18, 60, 0.45); /* rose-700 低饱和 */
+  color: rgba(244, 114, 182, 0.85);
+}
+
+/* HUD 通用胶囊（低饱和、毛玻璃） */
+.hud-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: rgba(203, 213, 225, 0.78);
+  background: rgba(15, 23, 42, 0.42);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 999px;
+  backdrop-filter: blur(6px);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+.hud-pill .hud-key {
+  color: rgba(148, 163, 184, 0.55);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .md3-stats {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 16px;
+  gap: 8px;
+  padding: 10px;
   background: var(--bg);
   overflow-y: auto;
   border-top: 1px solid var(--border);
 }
 
+/* 紧凑健康指标行（chip 风格） */
+.md3-stats-chips {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 10px;
+}
+.md3-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 11px;
+  line-height: 1.2;
+  flex: 1 1 calc(50% - 6px);
+  min-width: 0;
+}
+.md3-chip-icon { font-size: 13px; flex-shrink: 0; }
+.md3-chip-lbl { color: var(--muted); font-size: 10px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.md3-chip-val { color: var(--text); font-weight: 600; font-size: 11px; flex-shrink: 0; }
+
 .md3-stat-card {
   display: flex;
   align-items: center;
   background: var(--bg2);
-  border-radius: 20px;
-  padding: 16px 20px;
+  border-radius: 14px;
+  padding: 10px 14px;
   box-shadow: var(--shadow-1);
   transition: transform 0.25s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.25s;
-  gap: 16px;
+  gap: 10px;
 }
 
 .md3-stat-card:hover {
@@ -572,14 +639,15 @@ body * {
 }
 
 .md3-stat-icon {
-  font-size: 24px;
+  font-size: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 48px;
-  height: 48px;
+  width: 34px;
+  height: 34px;
   background: var(--bg);
-  border-radius: 16px;
+  border-radius: 10px;
+  flex-shrink: 0;
 }
 
 .md3-stat-info {
@@ -590,15 +658,15 @@ body * {
 }
 
 .md3-stat-lbl {
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--muted);
   letter-spacing: 0.03em;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 
 .md3-stat-val {
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 700;
   font-family: var(--sans);
   color: var(--text);
@@ -621,13 +689,13 @@ body * {
 .dash {
   flex: 1;
   overflow-y: auto;
-  padding: 32px;
+  padding: 16px 20px;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 14px;
   background: var(--bg);
   scroll-behavior: smooth;
-  max-width: 1000px;
+  max-width: 1100px;
   margin: 0 auto;
   width: 100%;
 }
@@ -638,17 +706,17 @@ body * {
 
 .sec {
   background: var(--bg2);
-  border-radius: var(--radius-lg);
-  padding: 24px;
+  border-radius: 18px;
+  padding: 14px 16px;
   border: 1px solid var(--border);
   box-shadow: var(--shadow-md);
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 10px;
 }
 
 .sec-title {
-  font-size: 16px;
+  font-size: 13px;
   font-weight: 700;
   color: var(--primary);
   display: flex;
@@ -660,14 +728,41 @@ body * {
 /* METRIC GRID (Material Design 3) */
 .metric-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
 }
+
+/* 3 大主指标行 */
+.metric-grid-hero {
+  grid-template-columns: repeat(3, 1fr);
+  margin-bottom: 8px;
+}
+.md-card-hero {
+  padding: 16px 18px;
+}
+.md-card-hero .md-card-icon { font-size: 22px; margin-bottom: 6px; }
+.md-card-hero .md-card-lbl { font-size: 11px; }
+.md-card-hero .md-card-val { font-size: 22px; font-weight: 700; }
+
+/* 3 小辅助指标行（横向 chip） */
+.metric-grid-mini {
+  grid-template-columns: repeat(3, 1fr);
+}
+.md-card-mini {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  font-size: 11px;
+}
+.md-card-mini .md-card-icon { font-size: 14px; margin: 0; }
+.md-card-mini .md-card-lbl { font-size: 10px; margin: 0; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.md-card-mini .md-card-val { font-size: 12px; font-weight: 600; flex-shrink: 0; }
 
 .md-card {
   background: var(--surface-glass);
-  border-radius: 16px;
-  padding: 20px;
+  border-radius: 12px;
+  padding: 12px 14px;
   display: flex;
   flex-direction: column;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
@@ -695,21 +790,21 @@ body * {
 }
 
 .md-card-icon {
-  font-size: 24px;
-  margin-bottom: 12px;
+  font-size: 18px;
+  margin-bottom: 4px;
 }
 
 .md-card-lbl {
-  font-size: 13px;
+  font-size: 10px;
   color: var(--hint);
   font-weight: 600;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
 .md-card-val {
-  font-size: 32px;
+  font-size: 22px;
   font-weight: 700;
   font-family: var(--sans);
   color: var(--text);
@@ -793,7 +888,7 @@ body * {
 .two-col {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  gap: 10px;
   min-width: 0;
 }
 .two-col > .sec { min-width: 0; overflow: hidden; }
@@ -844,7 +939,8 @@ body * {
 }
 .wa-chip.wa-focus     { background: rgba(76,175,80,.18);  color: var(--green); }
 .wa-chip.wa-distracted{ background: rgba(244,67,54,.18);  color: var(--red);   }
-.wa-chip.wa-unknown   { background: rgba(158,158,158,.18); color: var(--muted); }
+.wa-chip.wa-neutral   { background: rgba(148,163,184,.20); color: #94a3b8;     }
+.wa-chip.wa-unknown   { background: rgba(167,139,250,.18); color: #a78bfa;     }
 
 .wa-app-row {
   display: flex;
@@ -1066,13 +1162,13 @@ body * {
 .goal-ring-wrap {
   display: flex;
   align-items: center;
-  gap: 24px;
+  gap: 14px;
 }
 
 .goal-ring {
   position: relative;
-  width: 80px;
-  height: 80px;
+  width: 62px;
+  height: 62px;
   filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1));
 }
 
@@ -1089,36 +1185,36 @@ body * {
   align-items: center;
   justify-content: center;
   font-weight: 600;
-  font-size: 18px;
+  font-size: 14px;
 }
 
 .goal-info {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 3px;
   flex: 1;
 }
 
 .goal-info span {
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 500;
   color: var(--text);
 }
 
 .goal-set {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   align-items: center;
-  margin-top: 8px;
+  margin-top: 4px;
 }
 
 .goal-set input {
-  width: 60px;
+  width: 52px;
   background: var(--bg3);
   border: 1px solid var(--border);
   color: var(--text);
-  padding: 6px 8px;
-  font-size: 13px;
+  padding: 3px 6px;
+  font-size: 12px;
   border-radius: 6px;
   text-align: center;
   font-weight: 500;
@@ -1183,8 +1279,8 @@ body * {
   display: flex;
   align-items: flex-end;
   gap: 1px;
-  height: 56px;
-  padding: 8px 6px;
+  height: 44px;
+  padding: 5px 4px;
   background: var(--bg3);
   border-radius: var(--radius-md);
   overflow-x: auto;
@@ -1208,19 +1304,19 @@ body * {
 /* HEATMAP */
 .heatmap-wrap {
   overflow-x: auto;
-  padding-bottom: 8px;
+  padding-bottom: 4px;
 }
 
 .heatmap {
   display: grid;
-  grid-template-rows: repeat(3, 22px);
+  grid-template-rows: repeat(3, 18px);
   grid-auto-flow: column;
   gap: 1px;
 }
 
 .hm-cell {
-  width: 22px;
-  height: 22px;
+  width: 18px;
+  height: 18px;
   border-radius: 3px;
   background: var(--bg3);
   cursor: pointer;
@@ -1307,11 +1403,15 @@ body * {
   gap: 6px;
   padding: 5px 8px;
   border-bottom: 1px solid rgba(0,0,0,0.05);
+  border-left: 3px solid transparent;
   flex-wrap: nowrap;
   min-width: 0;
 }
 .wl-row:last-child { border-bottom: none; }
 .wl-row:hover { background: rgba(255,255,255,0.07); }
+.wl-row-focus    { border-left-color: var(--green); background: rgba(76,175,80,0.04); }
+.wl-row-dist     { border-left-color: var(--red-d); background: rgba(229,57,53,0.04); }
+.wl-row-unk      { border-left-color: var(--border); }
 .wl-time  { color: var(--hint); font-size: 11px; flex-shrink: 0; width: 36px; }
 .wl-name  { color: var(--blue); font-weight: 600; flex-shrink: 0; max-width: 70px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .wl-title { color: var(--fg2); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
@@ -1525,11 +1625,11 @@ body * {
 /* BANNERS */
 .banner {
   border-radius: var(--radius-md);
-  padding: 12px 20px;
+  padding: 8px 14px;
   display: none;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 20px;
+  margin-bottom: 8px;
   box-shadow: var(--shadow-2);
 }
 
@@ -1538,14 +1638,14 @@ body * {
 }
 
 .banner-txt {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
 }
 
 .banner-btn {
   border: none;
-  padding: 6px 16px;
-  font-size: 12px;
+  padding: 4px 12px;
+  font-size: 11px;
   font-weight: 600;
   border-radius: var(--radius-pill);
   cursor: pointer;
@@ -1778,11 +1878,9 @@ body * {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 15px;
-  height: 118px;
-  /* 进一步压缩高度 */
+  gap: 10px;
+  height: 96px;
   margin-top: 0px;
-  /* 消除顶距 */
   width: 100%;
   max-width: none;
 }
@@ -1795,21 +1893,18 @@ body * {
   align-items: center;
   justify-content: center;
   background: var(--bg3);
-  padding: 6px 8px;
-  /* 压缩内边距 */
+  padding: 4px 6px;
   border-radius: 10px;
   border: 1px solid var(--border);
-  height: 95px;
-  /* 卡片高度压低 */
+  height: 80px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
   min-width: 0;
 }
 
 .lb-side .streak-num {
-  font-size: 30px;
+  font-size: 22px;
   font-weight: 900;
   margin-bottom: 0px;
-  /* 减小间距 */
   line-height: 1;
   letter-spacing: -0.04em;
 }
@@ -1820,13 +1915,11 @@ body * {
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  gap: 6px;
+  gap: 5px;
   background: var(--bg2);
-  padding: 4px 10px;
-  /* 压缩内边距 */
-  border-radius: 14px;
-  height: 110px;
-  /* 区域高度压低 */
+  padding: 3px 8px;
+  border-radius: 12px;
+  height: 92px;
   border: 1px solid rgba(255, 255, 255, 0.05);
   min-width: 0;
 }
@@ -1857,19 +1950,19 @@ body * {
 
 /* 比例调整后的立柱高度 */
 .podium-col.p1 .podium-bar {
-  height: 75px;
+  height: 62px;
   background: linear-gradient(to top, #ffd70022, #ffd70088);
   border: 1px solid #ffd700;
 }
 
 .podium-col.p2 .podium-bar {
-  height: 55px;
+  height: 46px;
   background: linear-gradient(to top, #c0c0c022, #c0c0c088);
   border: 1px solid #c0c0c0;
 }
 
 .podium-col.p3 .podium-bar {
-  height: 38px;
+  height: 32px;
   background: linear-gradient(to top, #cd7f3222, #cd7f3288);
   border: 1px solid #cd7f32;
 }
@@ -2853,55 +2946,46 @@ body * {
     padding: 12px !important;
     display: flex !important;
     flex-direction: column !important;
-  }
-
-  .cam-view {
-    flex: 1 !important;
-    border-radius: 20px !important;
-    overflow: hidden !important;
-    background: var(--bg-solid) !important;
-    /* 背景跟随主题，消除死黑 */
-    box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.2) !important;
+    gap: 10px !important;
     position: relative !important;
   }
 
-  .cam-view #vid_stream {
+  .cam-panel .cam-view {
+    position: relative !important;
     width: 100% !important;
-    height: 100% !important;
-    object-fit: contain !important;
-    /* 恢复原始比例显示，消除裁切 */
-    display: block !important;
-    z-index: 5 !important;
+    aspect-ratio: 4 / 3 !important;
+    overflow: hidden !important;
+    border-radius: 18px !important;
   }
 
-  /* 竖屏动态看板激活 */
+  /* HUD 极简模式：低饱和、轻量字重、毛玻璃胶囊 */
   .cam-meta-top,
   .cam-meta-bottom {
     display: flex !important;
+    align-items: center !important;
     position: absolute !important;
-    left: 20px !important;
-    width: calc(100% - 40px) !important;
+    left: 12px !important;
+    right: 12px !important;
+    width: auto !important;
     z-index: 10 !important;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
-    font-size: 13px !important;
-    /* 提升可读性：10px -> 13px */
-    font-weight: 700 !important;
-    color: var(--text) !important;
-    /* 增强对比度 */
-    text-transform: uppercase !important;
-    letter-spacing: 0.02em !important;
     pointer-events: none !important;
-    opacity: 0.7 !important;
-    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.2) !important;
-    /* 增加轮廓感 */
+    gap: 6px !important;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+    font-size: 10px !important;
+    font-weight: 500 !important;
+    color: rgba(203, 213, 225, 0.85) !important;
+    letter-spacing: 0.04em !important;
+    text-transform: none !important;
+    opacity: 1 !important;
+    text-shadow: none !important;
   }
 
   .cam-meta-top {
-    top: 16px !important;
+    top: 10px !important;
   }
 
   .cam-meta-bottom {
-    bottom: 16px !important;
+    bottom: 10px !important;
   }
 
   /* 卡片 2/3: 右侧参数面板群 */
@@ -3235,25 +3319,27 @@ body * {
 
   /* --- 摄像头面板优化 --- */
   .cam-panel {
-    height: auto;
+    height: calc(100vh - 70px);
     max-height: calc(100vh - 70px);
     overflow-y: auto;
+    overflow-x: hidden;
     background: var(--bg2);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-md);
     border: 1px solid var(--border);
-    padding: 10px;
+    padding: 8px;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
     width: auto;
+    min-height: 0;
   }
 
   .cam-view {
-    /* 强制横屏下监控画面的比例接近 4:3 或 16:9，避免过分狭长 */
     aspect-ratio: 4 / 3;
     width: 100%;
     height: auto;
+    flex-shrink: 0;
     border-radius: var(--radius-md);
     overflow: hidden;
   }
@@ -3273,17 +3359,21 @@ body * {
 
   .md3-stats {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
+    grid-template-columns: 1fr;
+    gap: 6px;
     padding: 0;
     background: transparent;
     border-top: none;
     overflow-y: visible;
+    flex-shrink: 0;
   }
 
   .md3-stat-card {
-    padding: 10px;
+    padding: 8px 10px;
     border-radius: var(--radius-md);
+    display: flex;
+    gap: 8px;
+    align-items: center;
   }
 
   .md3-stat-icon {
@@ -3428,3 +3518,1755 @@ body * {
   font-size: 16px;
   padding: 0;
 }
+/* ════════════════════════════════════════════════════════════════
+   v3 窗口活动面板：三色统计 / Top5 双栏 / 待分类拨杆
+   ════════════════════════════════════════════════════════════════ */
+
+/* ① 三色统计条 */
+.wa-stats-bar { display:flex; height:28px; border-radius:6px; overflow:hidden;
+  background:rgba(148,163,184,0.10); margin:8px 0 12px; font-size:11px; }
+.wa-stat-seg { display:flex; align-items:center; justify-content:center;
+  transition:width .4s ease; min-width:0; overflow:hidden; white-space:nowrap;
+  color:#fff; font-weight:500; padding:0 4px; }
+.wa-seg-focus { background:linear-gradient(90deg,#4ade80,#22c55e); }
+.wa-seg-dist  { background:linear-gradient(90deg,#fb923c,#f97316); }
+.wa-seg-neu   { background:linear-gradient(90deg,#94a3b8,#64748b); }
+.wa-seg-unk   { background:linear-gradient(90deg,#a78bfa,#8b5cf6); }
+.wa-seg-lbl   { font-size:10px; opacity:.95; }
+.wa-seg-lbl b { font-weight:600; margin-left:2px; }
+
+/* ② Top5 双栏 */
+.wa-top-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px; }
+.wa-top-col  { background:rgba(148,163,184,0.06); border-radius:6px; padding:8px; }
+.wa-top-head { font-size:11px; font-weight:600; margin-bottom:6px; padding:2px 4px; }
+.wa-th-focus { color:#22c55e; }
+.wa-th-dist  { color:#f97316; }
+.wa-top-list { display:flex; flex-direction:column; gap:4px; }
+.wa-top-empty{ color:var(--hint); font-size:10px; padding:6px; text-align:center; }
+.wa-top-row  { display:grid; grid-template-columns:1fr 60px 36px auto; align-items:center;
+  gap:6px; font-size:10.5px; padding:3px 2px; }
+.wa-top-name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.wa-top-bar  { background:rgba(148,163,184,0.18); height:5px; border-radius:3px; overflow:hidden; }
+.wa-top-fill { background:#3b82f6; height:100%; transition:width .4s; }
+.wa-th-focus + .wa-top-list .wa-top-fill, .wa-top-col:has(.wa-th-focus) .wa-top-fill { background:#22c55e; }
+.wa-top-col:has(.wa-th-dist) .wa-top-fill { background:#f97316; }
+.wa-top-dur  { color:var(--hint); font-size:9.5px; text-align:right; }
+.wa-top-acts { display:flex; gap:2px; }
+.wa-mini { width:18px; height:18px; border:none; border-radius:3px; cursor:pointer;
+  font-size:9px; font-weight:600; padding:0; line-height:18px; opacity:0.6; transition:opacity .15s; }
+.wa-mini:hover { opacity:1; }
+.wa-mini-f { background:rgba(34,197,94,0.25); color:#22c55e; }
+.wa-mini-d { background:rgba(249,115,22,0.25); color:#f97316; }
+.wa-mini-n { background:rgba(148,163,184,0.25); color:#94a3b8; }
+
+/* ③ 待分类 */
+.wa-pending-sec { background:rgba(167,139,250,0.08); border-radius:6px; padding:8px;
+  margin-bottom:10px; border-left:3px solid #a78bfa; }
+.wa-pending-head { display:flex; justify-content:space-between; align-items:center;
+  font-size:11px; font-weight:600; color:#a78bfa; }
+.wa-pen-toggle { background:none; border:none; color:#a78bfa; font-size:10px;
+  cursor:pointer; padding:2px 6px; }
+.wa-pending-list { display:flex; flex-direction:column; gap:6px; margin-top:6px; }
+.wa-pen-card { background:rgba(15,23,42,0.35); border-radius:5px; padding:6px 8px; }
+.wa-pen-row1 { display:flex; justify-content:space-between; font-size:11px; font-weight:500; }
+.wa-pen-name { color:#fff; }
+.wa-pen-dur  { color:#a78bfa; font-size:10px; }
+.wa-pen-ttl  { color:var(--hint); font-size:9.5px; padding-left:6px;
+  display:flex; justify-content:space-between; }
+.wa-pen-tdur { color:#64748b; font-size:9px; }
+.wa-pen-acts { display:flex; gap:4px; margin-top:6px; }
+.wa-pen-btn  { flex:1; border:none; border-radius:4px; padding:4px 6px; font-size:10px;
+  cursor:pointer; font-weight:500; transition:transform .12s; }
+.wa-pen-btn:active { transform:scale(0.96); }
+.wa-pen-f { background:rgba(34,197,94,0.20); color:#22c55e; }
+.wa-pen-d { background:rgba(249,115,22,0.20); color:#f97316; }
+.wa-pen-n { background:rgba(148,163,184,0.20); color:#94a3b8; }
+
+/* ④ 折叠区 */
+.wa-collapsible { margin-top:8px; border-top:1px solid rgba(148,163,184,0.15); }
+.wa-collapsible-head { display:flex; justify-content:space-between; align-items:center;
+  padding:8px 4px; cursor:pointer; font-size:11px; color:var(--hint);
+  user-select:none; }
+.wa-collapsible-head:hover { color:#fff; }
+.wa-arrow { font-size:10px; transition:transform .15s; }
+
+
+/* v4 规则总表（程序/网站可拨档列表）*/
+.wa-rules-full { padding:6px 2px; }
+.wa-rules-full.hidden { display:none; }
+.wa-rules-empty { color:var(--hint); font-size:10px; padding:12px; text-align:center; }
+.wa-rules-group { margin-bottom:10px; }
+.wa-rules-ghead { font-size:10.5px; font-weight:600; padding:4px 2px 6px;
+  border-bottom:1px solid rgba(148,163,184,0.18); margin-bottom:4px; }
+.wa-rule-row { display:grid; grid-template-columns:1fr auto; align-items:center;
+  gap:8px; padding:4px 4px; border-radius:4px; font-size:10.5px; }
+.wa-rule-row:hover { background:rgba(148,163,184,0.08); }
+.wa-rule-name { display:flex; align-items:center; gap:6px; overflow:hidden;
+  white-space:nowrap; text-overflow:ellipsis; }
+.wa-rule-key { color:var(--hint); font-size:9px; font-family:monospace; opacity:.65; }
+.wa-rule-tag { font-size:8px; padding:1px 4px; border-radius:3px; font-weight:500; }
+.wa-tag-builtin { background:rgba(100,116,139,0.20); color:#94a3b8; }
+.wa-tag-user    { background:rgba(167,139,250,0.20); color:#a78bfa; }
+.wa-rule-acts { display:flex; gap:3px; }
+.wa-rule-btn { width:22px; height:20px; border:none; border-radius:3px; cursor:pointer;
+  font-size:9.5px; font-weight:600; padding:0; line-height:20px; opacity:.45;
+  transition:opacity .15s, transform .12s; }
+.wa-rule-btn:hover { opacity:.85; }
+.wa-rule-btn.on { opacity:1; transform:scale(1.05); box-shadow:0 0 0 1.5px currentColor inset; }
+.wa-rule-btn:active { transform:scale(.94); }
+.wa-rule-f { background:rgba(34,197,94,0.20); color:#22c55e; }
+.wa-rule-d { background:rgba(249,115,22,0.20); color:#f97316; }
+.wa-rule-n { background:rgba(148,163,184,0.20); color:#94a3b8; }
+.wa-rule-reset { background:rgba(167,139,250,0.16); color:#a78bfa; opacity:.7; }
+.wa-rule-reset:hover { opacity:1; }
+
+/* tab */
+.wl-rule-tabs { display:flex; gap:6px; margin-bottom:6px; padding-bottom:6px;
+  border-bottom:1px solid rgba(148,163,184,0.15); }
+.wl-rtab { flex:1; padding:5px 8px; border:none; border-radius:4px;
+  background:rgba(148,163,184,0.10); color:var(--hint); font-size:10.5px;
+  cursor:pointer; transition:all .15s; }
+.wl-rtab:hover { color:#fff; }
+.wl-rtab.active { background:rgba(59,130,246,0.20); color:#60a5fa; font-weight:500; }
+
+.wl-rule-filter { display:flex; align-items:center; gap:6px; font-size:10.5px;
+  color:var(--hint); padding:4px 2px 8px; cursor:pointer; user-select:none; }
+.wl-rule-filter input[type=checkbox] { cursor:pointer; }
+.wa-tag-unknown { background:rgba(167,139,250,0.20); color:#a78bfa; }
+
+/* 目标 tab */
+.goal-tabs-sec .goal-tabs-head { display:flex; gap:6px; padding:0 0 8px;
+  border-bottom:1px solid var(--border); }
+.goal-tab { flex:1; padding:6px 10px; border:none; border-radius:6px;
+  background:rgba(148,163,184,0.10); color:var(--muted); font-size:11px;
+  cursor:pointer; transition:all .15s; }
+.goal-tab:hover { color:var(--text); }
+.goal-tab.active { background:rgba(59,130,246,0.18); color:var(--blue); font-weight:600; }
+.goal-pane { padding-top:10px; }
+
+/* ============================================================
+   v2 紧缩 + 大字号（最终调优）
+   ============================================================ */
+
+/* 1) 基础字号 14px（原 11~13 全面+1） */
+body { font-size: 14px !important; }
+
+/* 2) 紧缩 .dash 与 .sec */
+.dash { padding: 8px 10px !important; gap: 8px !important; max-width: none !important; }
+.sec { padding: 8px 10px !important; gap: 6px !important; border-radius: 10px !important; }
+.sec-title { font-size: 14px !important; font-weight: 700 !important; }
+
+/* 3) metric grid 紧缩 — 6 等大累计卡（默认 3 列 2 行）
+   卡内布局：左大图标 + 右(标签上 / 数值下) 横排，对齐齐整 */
+.metric-grid { gap: 6px !important; }
+.metric-grid-hero { grid-template-columns: repeat(3, 1fr) !important; margin-bottom: 0 !important; gap: 6px !important; }
+.md-card-hero {
+  padding: 8px 12px !important;
+  display: grid !important;
+  grid-template-columns: auto 1fr !important;
+  grid-template-rows: auto auto !important;
+  grid-template-areas: "icon label" "icon value" !important;
+  align-items: center !important;
+  column-gap: 10px !important;
+  row-gap: 0 !important;
+  min-height: 0 !important;
+}
+.md-card-hero .md-card-icon {
+  grid-area: icon !important;
+  font-size: 26px !important;
+  margin: 0 !important;
+  align-self: center !important;
+  line-height: 1 !important;
+}
+.md-card-hero .md-card-lbl {
+  grid-area: label !important;
+  font-size: 12px !important;
+  margin: 0 !important;
+  color: var(--muted) !important;
+  align-self: end !important;
+  letter-spacing: 0.02em !important;
+}
+.md-card-hero .md-card-val {
+  grid-area: value !important;
+  font-size: 20px !important;
+  font-weight: 700 !important;
+  line-height: 1.15 !important;
+  align-self: start !important;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 4) health chip — 健康指标独立 sec，水平 4 等列 */
+.health-sec { padding: 6px 8px !important; }
+.health-sec .md3-stats { padding: 0 !important; border: none !important; background: transparent !important; }
+.md3-stats-chips {
+  display: grid !important;
+  grid-template-columns: repeat(4, 1fr) !important;
+  gap: 6px !important; padding: 0 !important;
+}
+.md3-chip {
+  display: grid !important;
+  grid-template-columns: auto 1fr !important;
+  grid-template-rows: auto auto !important;
+  grid-template-areas: "icon label" "icon value" !important;
+  align-items: center !important;
+  column-gap: 8px !important; row-gap: 0 !important;
+  padding: 6px 10px !important;
+  background: var(--bg2) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 10px !important;
+  flex: none !important;
+}
+.md3-chip-icon { grid-area: icon !important; font-size: 20px !important; line-height: 1 !important; }
+.md3-chip-lbl { grid-area: label !important; font-size: 12px !important; color: var(--muted) !important; align-self: end !important; }
+.md3-chip-val { grid-area: value !important; font-size: 14px !important; font-weight: 700 !important; align-self: start !important; }
+
+/* 5) 当前窗口 / Top5 / 规则 */
+.wa-app-row { font-size: 13px !important; }
+.wa-proc-name { font-size: 14px !important; font-weight: 700 !important; }
+.wa-stay-timer { font-size: 12px !important; }
+.wa-title-text { font-size: 12px !important; line-height: 1.3 !important; }
+.wa-stat { font-size: 13px !important; }
+.wa-top-grid { gap: 6px !important; }
+.wa-top-head { font-size: 13px !important; padding: 4px 6px !important; }
+.wa-top-list { font-size: 13px !important; }
+.wa-top-list > * { padding: 3px 6px !important; }
+.wa-collapsible-head { font-size: 13px !important; padding: 4px 6px !important; }
+.wl-rtab { font-size: 12px !important; padding: 5px 8px !important; }
+.wa-rule-row { padding: 3px 6px !important; gap: 6px !important; }
+.wa-rule-name { font-size: 13px !important; }
+.wa-rule-key { font-size: 11px !important; opacity: 0.6; }
+.wa-rule-btn { font-size: 12px !important; padding: 3px 8px !important; }
+.wa-rules-ghead { font-size: 12px !important; padding: 4px 0 2px !important; }
+
+/* 6) 排行榜紧缩 */
+.podium-wrap { gap: 8px !important; }
+.streak-num { font-size: 18px !important; }
+.podium-label { font-size: 12px !important; }
+.podium-val { font-size: 13px !important; }
+.gap-note { font-size: 11px !important; }
+
+/* 7) 时间轴 + 热力图 + 事件日志 */
+.tl-bars { gap: 1px !important; }
+.heatmap { gap: 2px !important; }
+.ev-list .ev { font-size: 12px !important; padding: 2px 0 !important; }
+.ev-list .ev-t { font-size: 11px !important; }
+
+/* 8) 目标 tab */
+.goal-tab { font-size: 13px !important; padding: 6px 10px !important; }
+.goal-tabs-sec .goal-tabs-head { padding: 0 0 6px !important; gap: 4px !important; }
+.goal-pane { padding-top: 6px !important; }
+.goal-info span { font-size: 12px !important; }
+.goal-ring-pct { font-size: 14px !important; }
+.goal-ring-wrap { gap: 10px !important; }
+.break-layout { gap: 8px !important; }
+.goal-set { gap: 4px !important; }
+.goal-set input { font-size: 13px !important; }
+.goal-set label { font-size: 12px !important; }
+
+/* 9) hdr */
+.hdr { min-height: 38px !important; padding: 0 10px !important; }
+.hdr-brand span { font-size: 14px !important; }
+.hdr-btn { font-size: 12px !important; padding: 4px 9px !important; }
+.clock { font-size: 13px !important; padding: 0 6px !important; }
+.pill { font-size: 12px !important; padding: 3px 10px !important; }
+
+/* 10) HUD pill */
+.hud-pill { font-size: 11px !important; padding: 2px 6px !important; }
+
+/* 11) 横屏（宽屏 ≥1300px）：把 排行榜+timeline+heatmap 三栏并排 */
+@media (min-width: 1300px) and (min-aspect-ratio: 1/1) {
+  .dash > #lbSec,
+  .dash > .sec:has(.tl-bars),
+  .dash > .sec:has(.heatmap) {
+    display: inline-flex !important;
+    width: calc(33.33% - 6px) !important;
+    vertical-align: top;
+    box-sizing: border-box;
+    margin-right: 8px;
+  }
+  .dash > .sec:has(.heatmap) { margin-right: 0 !important; }
+}
+
+/* 12) 竖屏（aspect<1）：摄像头浮动左上窄占；其他内容自然环绕 */
+@media (max-aspect-ratio: 1/1) {
+  .body {
+    display: block !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    padding: 6px !important;
+    box-sizing: border-box;
+  }
+  /* 摄像头：左上浮动，窄而高 —— 高度 ≈ 当前窗口+每日目标 两 sec 总高 */
+  .cam-panel {
+    float: left !important;
+    width: 26vw !important; max-width: 26vw !important;
+    height: 30vh !important; max-height: 30vh !important;
+    margin: 0 8px 6px 0 !important;
+    flex-direction: column !important;
+    border-right: none !important; border: 1px solid var(--border) !important;
+    border-radius: 10px !important;
+    overflow: hidden !important; gap: 0 !important;
+    flex-shrink: 0 !important;
+    background: var(--surface);
+  }
+  .cam-view {
+    width: 100% !important; height: 100% !important;
+    aspect-ratio: auto !important; max-width: none !important;
+  }
+  .cam-view #vid_stream { width: 100% !important; height: 100% !important; object-fit: cover; }
+
+  /* dash：占满，无外左 padding；内容会自然环绕 cam-panel */
+  .dash {
+    display: block !important;
+    width: auto !important; max-width: none !important; min-width: 0 !important;
+    margin: 0 !important; padding: 0 !important;
+    overflow: visible !important;
+  }
+  /* 注意：不能用 .dash > * { display:block } —— 会强制显示 banners（默认 display:none） */
+  .dash > .sec, .dash > .metric-grid, .dash > .two-col, .dash > #lbSec { display: block !important; margin-bottom: 6px !important; max-width: 100%; box-sizing: border-box; }
+  /* banners 仅在 .on 时显示，竖屏继承默认 */
+  .dash > .banner { margin-bottom: 6px; max-width: 100%; box-sizing: border-box; }
+  .dash > .banner:not(.on) { display: none !important; }
+
+  /* 健康 4 chip：横排 1×4，高度更矮 */
+  .health-sec { padding: 4px 6px !important; }
+  .md3-stats-chips { grid-template-columns: repeat(4, 1fr) !important; gap: 4px !important; }
+  .md3-chip { padding: 3px 8px !important; }
+  .md3-chip-icon { font-size: 16px !important; }
+  .md3-chip-lbl { font-size: 11px !important; }
+  .md3-chip-val { font-size: 13px !important; }
+
+  /* 6 累计卡：横排一条直线 1×6 */
+  .metric-grid-hero { display: grid !important; grid-template-columns: repeat(6, minmax(0,1fr)) !important; gap: 5px !important; }
+  .md-card-hero { padding: 6px 8px !important; column-gap: 6px !important; }
+  .md-card-hero .md-card-icon { font-size: 18px !important; }
+  .md-card-hero .md-card-lbl { font-size: 11px !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .md-card-hero .md-card-val { font-size: 15px !important; }
+
+  /* 当前窗口 + 每日目标：单列堆叠在右侧（环绕摄像头） */
+  .two-col { display: block !important; }
+  .two-col > .sec { width: auto !important; margin-bottom: 6px !important; }
+  /* 利用拉宽空间放大字号 */
+  #winMonitorSec .wa-proc-name { font-size: 16px !important; }
+  #winMonitorSec .wa-stay-timer { font-size: 13px !important; }
+  #winMonitorSec .wa-title-text { font-size: 13px !important; }
+  #winMonitorSec .wa-stat { font-size: 14px !important; }
+  .goal-tabs-sec .goal-tab { font-size: 14px !important; padding: 7px 12px !important; }
+  .goal-tabs-sec .goal-info span { font-size: 14px !important; }
+  .goal-tabs-sec .goal-ring-pct { font-size: 16px !important; }
+
+  /* clearfix：摄像头浮动后的兜底 */
+  .body::after { content: ""; display: block; clear: both; }
+
+  .dash > #lbSec,
+  .dash > .sec:has(.tl-bars),
+  .dash > .sec:has(.heatmap) { display:block !important; width:auto !important; margin-right:0 !important; }
+}
+
+  /* 健康 4 chip：横排 1×4，高度更矮 */
+  .health-sec { padding: 4px 6px !important; }
+  .md3-stats-chips { grid-template-columns: repeat(4, 1fr) !important; gap: 4px !important; }
+  .md3-chip { padding: 3px 8px !important; }
+  .md3-chip-icon { font-size: 16px !important; }
+  .md3-chip-lbl { font-size: 11px !important; }
+  .md3-chip-val { font-size: 13px !important; }
+
+  /* 6 累计卡：横排一条线 1×6 */
+  .metric-grid-hero { display: grid !important; grid-template-columns: repeat(6, minmax(0,1fr)) !important; gap: 5px !important; }
+  .md-card-hero { padding: 6px 8px !important; column-gap: 6px !important; }
+  .md-card-hero .md-card-icon { font-size: 18px !important; }
+  .md-card-hero .md-card-lbl { font-size: 11px !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .md-card-hero .md-card-val { font-size: 15px !important; }
+
+  /* 当前窗口 + 每日目标：单列堆叠在右侧（环绕摄像头） */
+  .two-col { display: block !important; }
+  .two-col > .sec { width: auto !important; margin-bottom: 6px !important; }
+  /* 利用拉宽空间放大字号 */
+  #winMonitorSec .wa-proc-name { font-size: 16px !important; }
+  #winMonitorSec .wa-stay-timer { font-size: 13px !important; }
+  #winMonitorSec .wa-title-text { font-size: 13px !important; }
+  #winMonitorSec .wa-stat { font-size: 14px !important; }
+  .goal-tabs-sec .goal-tab { font-size: 14px !important; padding: 7px 12px !important; }
+  .goal-tabs-sec .goal-info span { font-size: 14px !important; }
+  .goal-tabs-sec .goal-ring-pct { font-size: 16px !important; }
+
+  /* clearfix：摄像头浮动后的兜底 */
+  .body::after { content: ""; display: block; clear: both; }
+
+  .dash > #lbSec,
+  .dash > .sec:has(.tl-bars),
+  .dash > .sec:has(.heatmap) { display:block !important; width:auto !important; margin-right:0 !important; }
+}
+
+/* ============================================================
+   v3 BENTO 重设计 (竖屏优先) - 严格 vh 行高 + sec 内部可滚
+   ============================================================ */
+
+/* dash 抽屉项默认隐藏（之后 JS 移入 #drawerBody 不再受此影响） */
+.dash [data-drawer-item] { display: none !important; }
+
+/* .two-col 用 display:contents 透传，让内部 sec 直接成为 dash grid 子项 */
+.dash > .two-col.bento-twocol-wrap { display: contents !important; }
+
+/* dash 用 Grid Bento */
+.dash {
+  display: grid !important;
+  gap: 4px !important;
+  padding: 4px 6px !important;
+  overflow: hidden !important;
+  max-width: none !important;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+/* ───── 竖屏（aspect ≤ 1）优先：2 列 6 行严格 vh ───── */
+@media (max-aspect-ratio: 1/1) {
+  body, html { overflow: hidden; height: 100vh; }
+  .body { flex-direction: column !important; height: calc(100vh - 36px) !important; }
+  .cam-panel {
+    width: 100% !important;
+    height: 22vh !important; max-height: 22vh !important;
+    flex-direction: row !important;
+    border-right: none !important;
+    border-bottom: 1px solid var(--border) !important;
+    gap: 6px !important;
+    padding: 4px 6px !important;
+    flex-shrink: 0;
+  }
+  .cam-panel .cam-view { flex: 1 1 50%; max-width: 50%; min-height: 0; }
+  .cam-panel .cam-view video { width: 100% !important; height: 100% !important; object-fit: cover; }
+  .cam-panel .md3-stats {
+    flex: 1 1 50%;
+    border-top: none !important;
+    padding: 0 !important;
+    align-content: flex-start;
+    overflow-y: auto;
+    min-height: 0;
+  }
+  .dash {
+    height: calc(100vh - 36px - 22vh) !important;
+    grid-template-columns: 1fr 1fr !important;
+    grid-template-rows: 6vh 14vh 18vh 12vh 9vh 14vh !important;
+    grid-template-areas:
+      "health health"
+      "hero   hero  "
+      "win    goal  "
+      "lb     lb    "
+      "tl     tl    "
+      "hm     hm    " !important;
+  }
+}
+
+/* ───── 横屏（aspect > 1）：3 列布局，简单适配 ───── */
+@media (min-aspect-ratio: 1/1) {
+  .dash {
+    grid-template-columns: 1.2fr 1.4fr 1.4fr;
+    grid-template-rows: 8vh 22vh 1fr 1fr;
+    grid-template-areas:
+      "health health health"
+      "hero   hero   hero  "
+      "win    goal   lb    "
+      "tl     hm     hm    " !important;
+  }
+}
+
+/* 模块绑定 grid-area（后代选择器，兼容 .two-col + display:contents） */
+.dash [data-bento="health"] { grid-area: health; }
+.dash [data-bento="hero"]   { grid-area: hero; }
+.dash [data-bento="win"]    { grid-area: win; min-width: 0; min-height: 0; }
+.dash [data-bento="goal"]   { grid-area: goal; min-width: 0; min-height: 0; }
+.dash [data-bento="lb"]     { grid-area: lb; min-width: 0; min-height: 0; }
+.dash [data-bento="tl"]     { grid-area: tl; min-width: 0; min-height: 0; }
+.dash [data-bento="hm"]     { grid-area: hm; min-width: 0; min-height: 0; }
+
+/* sec 容器：禁外溢 + 内部可滚（避免裁剪） */
+.dash .sec {
+  overflow: hidden;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 4px 8px !important;
+  margin: 0 !important;
+}
+.dash .sec .sec-title {
+  font-size: 11px !important;
+  margin-bottom: 3px !important;
+  flex-shrink: 0;
+}
+.dash .sec > *:not(.sec-title) {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+
+/* ─── 健康 chip 单行 4 列 ─── */
+.dash [data-bento="health"] {
+  padding: 4px 8px !important;
+  display: block !important;
+}
+.dash [data-bento="health"] .md3-stats-chips {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 4px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  height: 100%;
+  align-items: stretch;
+}
+.dash [data-bento="health"] .md3-chip {
+  padding: 4px 6px !important;
+  display: flex !important;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.dash [data-bento="health"] .md3-chip-icon { font-size: 14px !important; flex-shrink: 0; }
+.dash [data-bento="health"] .md3-chip-lbl { font-size: 10px !important; }
+.dash [data-bento="health"] .md3-chip-val { font-size: 12px !important; font-weight: 700; }
+
+/* ─── hero 6 卡 3×2 严格填满 ─── */
+.dash [data-bento="hero"] {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  grid-template-rows: repeat(2, 1fr) !important;
+  gap: 4px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  background: transparent;
+  border: none;
+}
+.dash [data-bento="hero"] .md-card-hero {
+  margin: 0 !important;
+  padding: 4px 6px !important;
+  min-width: 0;
+  min-height: 0;
+  display: grid !important;
+  grid-template-columns: 22px 1fr;
+  grid-template-rows: 1fr 1fr;
+  grid-template-areas: "icon lbl" "icon val";
+  gap: 0 4px;
+  align-items: center;
+}
+.dash [data-bento="hero"] .md-card-icon { grid-area: icon; font-size: 18px; align-self: center; }
+.dash [data-bento="hero"] .md-card-lbl { grid-area: lbl; font-size: 10px !important; align-self: end; }
+.dash [data-bento="hero"] .md-card-val { grid-area: val; font-size: 13px !important; font-weight: 700; align-self: start; }
+
+/* ─── 当前窗口 win ─── */
+.dash [data-bento="win"] .wa-app-row { font-size: 12px !important; }
+.dash [data-bento="win"] .wa-proc-name { font-size: 13px !important; }
+.dash [data-bento="win"] .wa-stay-timer { font-size: 11px !important; }
+.dash [data-bento="win"] .wa-title-text { font-size: 11px !important; line-height: 1.3; }
+.dash [data-bento="win"] .wa-recent-list { max-height: none; font-size: 10px !important; }
+.dash [data-bento="win"] .wa-today-stats { font-size: 11px !important; }
+
+/* ─── 目标 goal ─── */
+.dash [data-bento="goal"] .goal-tab { font-size: 11px !important; padding: 3px 6px !important; }
+.dash [data-bento="goal"] .goal-ring svg { width: 50px; height: 50px; }
+.dash [data-bento="goal"] .goal-ring-pct { font-size: 11px !important; }
+.dash [data-bento="goal"] .goal-info span { font-size: 11px !important; }
+.dash [data-bento="goal"] .goal-set input { font-size: 11px !important; padding: 2px 4px !important; width: 50px; }
+
+/* ─── 排行榜 lb ─── */
+.dash [data-bento="lb"] .lb-row { font-size: 11px !important; padding: 2px 6px !important; }
+.dash [data-bento="lb"] .lb-rank { font-size: 12px !important; }
+
+/* ─── 时间轴 tl ─── */
+.dash [data-bento="tl"] .tl-bars { height: 100%; min-height: 0; }
+
+/* ─── 热力图 hm ─── */
+.dash [data-bento="hm"] .heatmap-wrap { height: 100%; }
+.dash [data-bento="hm"] .heatmap { height: 100%; }
+
+/* ============================================================
+   抽屉浮层
+   ============================================================ */
+.drawer {
+  position: fixed; top: 0; right: 0;
+  width: min(420px, 90vw); height: 100vh;
+  background: var(--bg2);
+  border-left: 1px solid var(--border);
+  box-shadow: -8px 0 30px rgba(0,0,0,0.3);
+  z-index: 200;
+  display: flex; flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.drawer.open { transform: translateX(0); }
+.drawer-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.drawer-title { font-size: 13px; font-weight: 700; color: var(--primary); }
+.drawer-close {
+  background: var(--bg3); border: none; color: var(--text);
+  width: 26px; height: 26px; border-radius: 50%;
+  cursor: pointer; font-size: 13px;
+  display: flex; align-items: center; justify-content: center;
+}
+.drawer-close:hover { background: var(--border); }
+.drawer-body {
+  flex: 1; overflow-y: auto;
+  padding: 8px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.drawer-body > .sec,
+.drawer-body [data-drawer-item] { display: block !important; }
+.drawer-mask {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 199;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.2s;
+}
+.drawer-mask.show { opacity: 1; pointer-events: auto; }
+
+/* ============================================================
+   v3.1 BENTO 调整：摄像头永远顶部横条 + 行高紧凑填满
+   ============================================================ */
+
+/* 强制 .body 永远 column（不论横竖屏），消除左侧空白 */
+.body {
+  flex-direction: column !important;
+  height: calc(100vh - 36px) !important;
+  overflow: hidden !important;
+}
+
+/* 摄像头永远顶部横条，固定 18vh */
+.cam-panel {
+  width: 100% !important;
+  height: 18vh !important;
+  max-height: 18vh !important;
+  min-height: 18vh !important;
+  flex-direction: row !important;
+  border-right: none !important;
+  border-bottom: 1px solid var(--border) !important;
+  gap: 6px !important;
+  padding: 4px 6px !important;
+  flex-shrink: 0 !important;
+  float: none !important;
+  position: static !important;
+}
+.cam-panel .cam-view {
+  flex: 0 0 auto !important;
+  width: auto !important;
+  max-width: 32vw !important;
+  height: 100% !important;
+  min-height: 0 !important;
+}
+.cam-panel .cam-view video {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+}
+.cam-panel .md3-stats {
+  flex: 1 1 auto !important;
+  border-top: none !important;
+  border-left: 1px solid var(--border) !important;
+  padding: 0 6px !important;
+  align-content: flex-start;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+/* dash 永远填满剩余高度 */
+.dash {
+  height: calc(100vh - 36px - 18vh) !important;
+  width: 100% !important;
+}
+
+/* ───── 竖屏（max-aspect 1/1）：2 列，行高紧凑刚够用 ───── */
+@media (max-aspect-ratio: 1/1) {
+  .dash {
+    grid-template-columns: 1fr 1fr !important;
+    grid-template-rows: 6vh 13vh 18vh 13vh 9vh 19vh !important;
+    grid-template-areas:
+      "health health"
+      "hero   hero  "
+      "win    goal  "
+      "lb     lb    "
+      "tl     tl    "
+      "hm     hm    " !important;
+  }
+}
+
+/* ───── 横屏（min-aspect 1/1）：3 列，紧凑 ───── */
+@media (min-aspect-ratio: 1/1) {
+  .dash {
+    grid-template-columns: 1.2fr 1.4fr 1.4fr !important;
+    grid-template-rows: 8vh 28vh 1fr 1fr !important;
+    grid-template-areas:
+      "health health health"
+      "hero   hero   hero  "
+      "win    goal   lb    "
+      "tl     hm     hm    " !important;
+  }
+}
+
+/* ============================================================
+   v3.2: cam-view 填满横条 + winLog 加回主屏（仅 ev 进抽屉）
+   ============================================================ */
+.cam-panel .cam-view {
+  flex: 1 1 100% !important;
+  width: 100% !important;
+  max-width: none !important;
+  height: 100% !important;
+}
+.cam-panel .cam-view img,
+.cam-panel .cam-view video {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+}
+
+/* 竖屏：7 行布局，加入 winlog */
+@media (max-aspect-ratio: 1/1) {
+  .dash {
+    grid-template-columns: 1fr 1fr !important;
+    grid-template-rows: 5vh 12vh 16vh 14vh 11vh 8vh 12vh !important;
+    grid-template-areas:
+      "health  health"
+      "hero    hero  "
+      "win     goal  "
+      "winlog  winlog"
+      "lb      lb    "
+      "tl      tl    "
+      "hm      hm    " !important;
+  }
+}
+
+/* 横屏：4 行 3 列，加入 winlog */
+@media (min-aspect-ratio: 1/1) {
+  .dash {
+    grid-template-columns: 1.2fr 1.4fr 1.4fr !important;
+    grid-template-rows: 7vh 24vh 1fr 1fr !important;
+    grid-template-areas:
+      "health  health  health"
+      "hero    hero    hero  "
+      "win     goal    winlog"
+      "tl      hm      lb    " !important;
+  }
+}
+
+.dash [data-bento="winlog"] { grid-area: winlog; min-width: 0; min-height: 0; }
+
+/* v3.3: 强制 cam-view img 用 #vid_stream 高特异性选择器 */
+#vid_stream {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  border-radius: 0 !important;
+}
+.cam-panel { width: 100vw !important; max-width: 100vw !important; }
+.cam-panel .cam-view {
+  flex: 1 1 100% !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  height: 100% !important;
+  display: block !important;
+}
+
+/* ============================================================
+   v3.4: 双抽屉方案 - cam-panel 移入左抽屉，winLog/ev 在右抽屉
+   主屏只剩 dash（health/hero/win/goal/lb/tl/hm 7 块）
+   ============================================================ */
+
+/* 主屏不再显示 cam-panel（因 data-drawer-item-left，会被 JS 移走） */
+/* 在 JS 移走前先隐藏避免闪烁 */
+.body > .cam-panel[data-drawer-item-left] { display: none !important; }
+/* 移入抽屉后恢复显示（覆盖上一行） */
+#drawerBodyLeft .cam-panel { display: flex !important; width: 100% !important; height: 50vh !important; max-height: 50vh !important; flex-direction: column !important; border: none !important; }
+#drawerBodyLeft .cam-panel .cam-view { width: 100% !important; height: 100% !important; max-width: none !important; }
+#drawerBodyLeft #vid_stream { width: 100% !important; height: 100% !important; object-fit: contain !important; }
+
+/* dash 在没有 cam-panel 时占满 .body 整高 */
+.body { flex-direction: column !important; height: calc(100vh - 36px) !important; overflow: hidden !important; }
+.dash { height: 100% !important; width: 100% !important; }
+
+/* ───── 竖屏：7 块（去掉 winlog） ───── */
+@media (max-aspect-ratio: 1/1) {
+  .dash {
+    grid-template-columns: 1fr 1fr !important;
+    grid-template-rows: 7vh 18vh 22vh 16vh 12vh 20vh !important;
+    grid-template-areas:
+      "health health"
+      "hero   hero  "
+      "win    goal  "
+      "lb     lb    "
+      "tl     tl    "
+      "hm     hm    " !important;
+  }
+}
+
+/* ───── 横屏：7 块 3×3 ───── */
+@media (min-aspect-ratio: 1/1) {
+  .dash {
+    grid-template-columns: 1fr 1fr 1fr !important;
+    grid-template-rows: 9vh 30vh 28vh 28vh !important;
+    grid-template-areas:
+      "health health health"
+      "hero   hero   hero  "
+      "win    goal   lb    "
+      "tl     hm     hm    " !important;
+  }
+}
+
+/* 抽屉项默认在 dash 中隐藏（winLog/evSec） */
+.dash [data-drawer-item] { display: none !important; }
+.drawer-body [data-drawer-item],
+.drawer-body > .sec { display: block !important; }
+
+/* 左抽屉（从左滑入） */
+.drawer.drawer-left {
+  left: 0; right: auto;
+  border-left: none;
+  border-right: 1px solid var(--border);
+  box-shadow: 8px 0 30px rgba(0,0,0,0.3);
+  transform: translateX(-100%);
+}
+.drawer.drawer-left.open { transform: translateX(0); }
+
+/* ============================================================
+   v3.5: 撑满字体 + 健康 chip 重排 + winLog 回归 + 缩 tl/hm
+   ============================================================ */
+
+/* ───── 竖屏：8 块 ───── */
+@media (max-aspect-ratio: 1/1) {
+  .dash {
+    grid-template-columns: 1fr 1fr !important;
+    grid-template-rows: 9vh 18vh 22vh 16vh 14vh 6vh 10vh !important;
+    grid-template-areas:
+      "health  health"
+      "hero    hero  "
+      "win     goal  "
+      "winlog  winlog"
+      "lb      lb    "
+      "tl      tl    "
+      "hm      hm    " !important;
+  }
+}
+
+/* ───── 横屏：8 块 ───── */
+@media (min-aspect-ratio: 1/1) {
+  .dash {
+    grid-template-columns: 1fr 1fr 1fr !important;
+    grid-template-rows: 9vh 28vh 30vh 12vh 16vh !important;
+    grid-template-areas:
+      "health  health  health"
+      "hero    hero    hero  "
+      "win     goal    winlog"
+      "tl      tl      tl    "
+      "lb      hm      hm    " !important;
+  }
+}
+
+/* ─── 健康 chip 重排：grid 图标 | (lbl 上 / val 下) ─── */
+.dash [data-bento="health"] .md3-chip {
+  display: grid !important;
+  grid-template-columns: 28px 1fr !important;
+  grid-template-rows: auto auto !important;
+  grid-template-areas: "icon lbl" "icon val" !important;
+  gap: 0 6px !important;
+  align-items: center !important;
+  padding: 5px 8px !important;
+  background: var(--bg2) !important;
+  border-radius: 8px !important;
+  border: 1px solid var(--border);
+}
+.dash [data-bento="health"] .md3-chip-icon { grid-area: icon !important; font-size: 22px !important; align-self: center !important; text-align: center; }
+.dash [data-bento="health"] .md3-chip-lbl { grid-area: lbl !important; font-size: 11px !important; color: var(--hint); align-self: end; }
+.dash [data-bento="health"] .md3-chip-val { grid-area: val !important; font-size: 14px !important; font-weight: 700; align-self: start; }
+
+/* ─── hero 字号撑大 ─── */
+.dash [data-bento="hero"] .md-card-hero {
+  padding: 6px 8px !important;
+  background: var(--bg2) !important;
+  border-radius: 8px !important;
+  border: 1px solid var(--border);
+}
+.dash [data-bento="hero"] .md-card-icon { font-size: 24px !important; }
+.dash [data-bento="hero"] .md-card-lbl { font-size: 12px !important; }
+.dash [data-bento="hero"] .md-card-val { font-size: 17px !important; }
+
+/* ─── 当前窗口字号 ─── */
+.dash [data-bento="win"] .wa-proc-name { font-size: 14px !important; font-weight: 700; }
+.dash [data-bento="win"] .wa-stay-timer { font-size: 12px !important; }
+.dash [data-bento="win"] .wa-title-text { font-size: 12px !important; line-height: 1.4; }
+.dash [data-bento="win"] .wa-recent-list { font-size: 11px !important; }
+.dash [data-bento="win"] .wa-today-stats { font-size: 12px !important; }
+
+/* ─── 目标字号 ─── */
+.dash [data-bento="goal"] .goal-tab { font-size: 12px !important; padding: 4px 8px !important; }
+.dash [data-bento="goal"] .goal-ring svg { width: 56px !important; height: 56px !important; }
+.dash [data-bento="goal"] .goal-ring-pct { font-size: 13px !important; }
+.dash [data-bento="goal"] .goal-info span { font-size: 12px !important; }
+.dash [data-bento="goal"] .goal-set input { font-size: 12px !important; padding: 3px 5px !important; }
+
+/* ─── 排行榜字号 ─── */
+.dash [data-bento="lb"] .lb-row { font-size: 12px !important; padding: 3px 8px !important; }
+.dash [data-bento="lb"] .lb-rank { font-size: 13px !important; }
+
+/* ─── 时间轴 / 热力图 紧凑（高度由 grid 控） ─── */
+.dash [data-bento="tl"] .sec-title,
+.dash [data-bento="hm"] .sec-title { font-size: 10px !important; margin-bottom: 2px !important; }
+.dash [data-bento="tl"] .tl-bars { height: 100% !important; }
+.dash [data-bento="hm"] .heatmap-wrap, .dash [data-bento="hm"] .heatmap { height: 100% !important; }
+
+/* ─── winLog 字号 ─── */
+.dash [data-bento="winlog"] { padding: 4px 8px !important; }
+.dash [data-bento="winlog"] .wa-top-grid { font-size: 12px !important; }
+.dash [data-bento="winlog"] .wa-rule-list { font-size: 11px !important; }
+
+/* ─── sec-title 撑大点 ─── */
+.dash .sec .sec-title { font-size: 12px !important; }
+
+/* ============================================================
+   v3.6: goal 拆 3 列 + 排行榜放大 + 规则总表入右抽屉 + break 美化
+   ============================================================ */
+
+/* ───── 竖屏：8 块（goal3 3 列 + winlog 仅 Top5） ───── */
+@media (max-aspect-ratio: 1/1) {
+  .dash {
+    grid-template-columns: 1fr 1fr !important;
+    grid-template-rows: 8vh 17vh 13vh 13vh 14vh 18vh 6vh 6vh !important;
+    grid-template-areas:
+      "health  health"
+      "hero    hero  "
+      "win     win   "
+      "goal    goal  "
+      "winlog  winlog"
+      "lb      lb    "
+      "tl      tl    "
+      "hm      hm    " !important;
+  }
+}
+
+/* ───── 横屏 ───── */
+@media (min-aspect-ratio: 1/1) {
+  .dash {
+    grid-template-columns: 1fr 1fr 1fr !important;
+    grid-template-rows: 9vh 24vh 18vh 14vh 14vh 14vh !important;
+    grid-template-areas:
+      "health  health  health"
+      "hero    hero    hero  "
+      "win     win     winlog"
+      "goal    goal    winlog"
+      "lb      lb      lb    "
+      "tl      hm      hm    " !important;
+  }
+}
+
+/* ─── goal 拆 3 列：所有 goalPane 强制显示 ─── */
+.dash [data-bento="goal"].goal-split {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr 1fr !important;
+  gap: 6px !important;
+  padding: 4px !important;
+}
+.dash [data-bento="goal"].goal-split .goal-pane {
+  display: flex !important;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 8px;
+  min-width: 0;
+  align-items: center;
+  justify-content: center;
+}
+.dash [data-bento="goal"].goal-split .goal-ring-wrap,
+.dash [data-bento="goal"].goal-split .break-layout {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  gap: 4px !important;
+  width: 100%;
+}
+.dash [data-bento="goal"].goal-split .goal-ring svg {
+  width: 60px !important; height: 60px !important;
+}
+.dash [data-bento="goal"].goal-split .goal-ring-pct { font-size: 13px !important; }
+.dash [data-bento="goal"].goal-split .goal-info {
+  text-align: center;
+  font-size: 11px !important;
+}
+.dash [data-bento="goal"].goal-split .goal-info span { font-size: 11px !important; display: block; }
+.dash [data-bento="goal"].goal-split .goal-set {
+  display: flex; align-items: center; gap: 4px; justify-content: center;
+}
+.dash [data-bento="goal"].goal-split .goal-set input {
+  font-size: 11px !important; padding: 2px 4px !important; width: 50px !important;
+}
+.dash [data-bento="goal"].goal-split .goal-set label { font-size: 10px !important; }
+
+/* break 卡片美化：圆环更大 + 数字加粗居中 + 按钮 */
+.dash [data-bento="goal"].goal-split #breakSec { gap: 6px !important; }
+.dash [data-bento="goal"].goal-split #breakTimer {
+  font-size: 16px !important;
+  font-weight: 800 !important;
+  color: var(--primary) !important;
+  text-shadow: 0 0 6px rgba(99,102,241,0.3);
+}
+.dash [data-bento="goal"].goal-split .md3-btn-large {
+  padding: 4px 10px !important;
+  font-size: 11px !important;
+  display: inline-flex !important;
+  gap: 3px;
+  border-radius: 12px !important;
+}
+
+/* ─── 排行榜放大 + 拉高 + 撑满 ─── */
+.dash [data-bento="lb"] { padding: 6px 10px !important; }
+.dash [data-bento="lb"] .sec-title { font-size: 13px !important; }
+.dash [data-bento="lb"] .podium-wrap {
+  display: grid !important;
+  grid-template-columns: 1fr 2fr 1fr !important;
+  gap: 10px;
+  align-items: center;
+  height: 100%;
+}
+.dash [data-bento="lb"] .lb-side { text-align: center; }
+.dash [data-bento="lb"] .podium-medal { font-size: 24px !important; }
+.dash [data-bento="lb"] .streak-num { font-size: 22px !important; font-weight: 800 !important; }
+.dash [data-bento="lb"] .podium-label { font-size: 12px !important; color: var(--hint); }
+.dash [data-bento="lb"] .gap-note { font-size: 11px !important; }
+.dash [data-bento="lb"] .lb-row { font-size: 13px !important; padding: 5px 10px !important; line-height: 1.5; }
+.dash [data-bento="lb"] .lb-rank { font-size: 14px !important; font-weight: 700; }
+
+/* ─── winLog 主屏只显示 Top5（规则总表已抽走） ─── */
+.dash [data-bento="winlog"] { padding: 4px 10px !important; }
+.dash [data-bento="winlog"] .wa-top-grid {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  font-size: 12px !important;
+  height: 100%;
+}
+.dash [data-bento="winlog"] .wa-top-head { font-size: 12px !important; font-weight: 700; margin-bottom: 3px; }
+.dash [data-bento="winlog"] .wa-top-list { font-size: 11px !important; }
+
+/* ============================================================
+   v3.7: win 左半 + goal3 右半（纵向 3 卡叠加）
+   ============================================================ */
+
+/* 竖屏：win|goal 同行 */
+@media (max-aspect-ratio: 1/1) {
+  .dash {
+    grid-template-columns: 1fr 1fr !important;
+    grid-template-rows: 8vh 17vh 30vh 14vh 18vh 4vh 4vh !important;
+    grid-template-areas:
+      "health  health"
+      "hero    hero  "
+      "win     goal  "
+      "winlog  winlog"
+      "lb      lb    "
+      "tl      tl    "
+      "hm      hm    " !important;
+  }
+}
+
+/* 横屏 */
+@media (min-aspect-ratio: 1/1) {
+  .dash {
+    grid-template-columns: 1fr 1fr 1fr !important;
+    grid-template-rows: 9vh 22vh 30vh 16vh 16vh !important;
+    grid-template-areas:
+      "health  health  health"
+      "hero    hero    hero  "
+      "win     goal    winlog"
+      "lb      lb      lb    "
+      "tl      hm      hm    " !important;
+  }
+}
+
+/* goal 改成纵向 3 行（每个 pane 一卡，竖向叠加） */
+.dash [data-bento="goal"].goal-split {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  grid-template-rows: 1fr 1fr 1fr !important;
+  gap: 4px !important;
+  padding: 4px !important;
+}
+.dash [data-bento="goal"].goal-split .goal-pane {
+  display: grid !important;
+  grid-template-columns: 60px 1fr !important;
+  grid-template-rows: 1fr !important;
+  align-items: center;
+  gap: 8px !important;
+  padding: 4px 8px !important;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  min-height: 0;
+  overflow: hidden;
+}
+.dash [data-bento="goal"].goal-split .goal-ring-wrap {
+  display: contents !important;
+}
+.dash [data-bento="goal"].goal-split .break-layout {
+  display: contents !important;
+}
+.dash [data-bento="goal"].goal-split .goal-ring {
+  position: relative;
+  width: 56px; height: 56px;
+}
+.dash [data-bento="goal"].goal-split .goal-ring svg {
+  width: 56px !important; height: 56px !important;
+}
+.dash [data-bento="goal"].goal-split .goal-ring-pct {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px !important;
+  font-weight: 700;
+}
+.dash [data-bento="goal"].goal-split .goal-info,
+.dash [data-bento="goal"].goal-split .break-mid {
+  display: flex; flex-direction: column; gap: 2px;
+  text-align: left;
+  min-width: 0;
+}
+.dash [data-bento="goal"].goal-split .goal-info span,
+.dash [data-bento="goal"].goal-split .break-mid span {
+  font-size: 11px !important; line-height: 1.3;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.dash [data-bento="goal"].goal-split .goal-set {
+  display: flex; align-items: center; gap: 3px;
+  margin-top: 2px;
+}
+.dash [data-bento="goal"].goal-split .goal-set input {
+  font-size: 11px !important; padding: 1px 3px !important; width: 44px !important;
+}
+.dash [data-bento="goal"].goal-split .goal-set label { font-size: 10px !important; color: var(--hint); }
+
+/* break 按钮缩到 break pane 内 */
+.dash [data-bento="goal"].goal-split #breakSec {
+  display: contents !important;
+}
+.dash [data-bento="goal"].goal-split .md3-btn-large {
+  position: absolute;
+  bottom: 6px; right: 6px;
+  padding: 2px 8px !important;
+  font-size: 10px !important;
+}
+.dash [data-bento="goal"].goal-split #goalPane_break { position: relative; }
+.dash [data-bento="goal"].goal-split #breakTimer {
+  font-size: 13px !important; font-weight: 800 !important;
+  color: var(--primary) !important;
+}
+
+/* ============================================================
+   v3.8: 字号大幅放大 + 缩 win/goal 高 + 3 卡严格等高
+   ============================================================ */
+
+/* 竖屏：win/goal 24vh，3 卡每个 8vh */
+@media (max-aspect-ratio: 1/1) {
+  .dash {
+    grid-template-columns: 1fr 1fr !important;
+    grid-template-rows: 7vh 16vh 22vh 20vh 16vh 7vh 7vh !important;
+    grid-template-areas:
+      "health  health"
+      "hero    hero  "
+      "win     goal  "
+      "winlog  winlog"
+      "lb      lb    "
+      "tl      tl    "
+      "hm      hm    " !important;
+  }
+}
+
+/* ─── 字号全面放大（约翻倍） ─── */
+
+/* 健康 chip */
+.dash [data-bento="health"] .md3-chip-icon { font-size: 28px !important; }
+.dash [data-bento="health"] .md3-chip-lbl { font-size: 13px !important; }
+.dash [data-bento="health"] .md3-chip-val { font-size: 18px !important; }
+
+/* hero 6 卡 */
+.dash [data-bento="hero"] .md-card-icon { font-size: 32px !important; }
+.dash [data-bento="hero"] .md-card-lbl { font-size: 14px !important; }
+.dash [data-bento="hero"] .md-card-val { font-size: 22px !important; }
+
+/* 当前窗口 win */
+.dash [data-bento="win"] .sec-title { font-size: 14px !important; }
+.dash [data-bento="win"] .wa-proc-name { font-size: 18px !important; }
+.dash [data-bento="win"] .wa-stay-timer { font-size: 14px !important; }
+.dash [data-bento="win"] .wa-title-text { font-size: 14px !important; line-height: 1.4; }
+.dash [data-bento="win"] .wa-recent-list { font-size: 13px !important; }
+.dash [data-bento="win"] .wa-today-stats { font-size: 14px !important; }
+.dash [data-bento="win"] .wa-stat { font-size: 14px !important; }
+
+/* goal 3 卡严格等高 + 字号放大 */
+.dash [data-bento="goal"].goal-split {
+  grid-template-rows: 1fr 1fr 1fr !important;
+}
+.dash [data-bento="goal"].goal-split .goal-pane {
+  height: 100% !important;
+  min-height: 0 !important;
+  grid-template-columns: 64px 1fr !important;
+  padding: 4px 8px !important;
+}
+.dash [data-bento="goal"].goal-split .goal-ring,
+.dash [data-bento="goal"].goal-split .goal-ring svg {
+  width: 60px !important; height: 60px !important;
+}
+.dash [data-bento="goal"].goal-split .goal-ring-pct { font-size: 14px !important; }
+.dash [data-bento="goal"].goal-split .goal-info span,
+.dash [data-bento="goal"].goal-split .break-mid span { font-size: 13px !important; }
+.dash [data-bento="goal"].goal-split .goal-set input { font-size: 12px !important; width: 50px !important; }
+.dash [data-bento="goal"].goal-split .goal-set label { font-size: 11px !important; }
+.dash [data-bento="goal"].goal-split #breakTimer { font-size: 16px !important; }
+.dash [data-bento="goal"].goal-split .md3-btn-large { font-size: 12px !important; padding: 3px 10px !important; }
+
+/* winLog Top5 字号 */
+.dash [data-bento="winlog"] .sec-title { font-size: 14px !important; }
+.dash [data-bento="winlog"] .wa-top-head { font-size: 14px !important; }
+.dash [data-bento="winlog"] .wa-top-list { font-size: 13px !important; line-height: 1.5; }
+.dash [data-bento="winlog"] .wa-top-list > * { padding: 2px 0 !important; }
+
+/* 排行榜放大（撑满边） */
+.dash [data-bento="lb"] .podium-medal { font-size: 32px !important; }
+.dash [data-bento="lb"] .streak-num { font-size: 28px !important; }
+.dash [data-bento="lb"] .podium-label { font-size: 14px !important; }
+.dash [data-bento="lb"] .gap-note { font-size: 12px !important; }
+.dash [data-bento="lb"] .lb-row { font-size: 14px !important; padding: 6px 12px !important; }
+.dash [data-bento="lb"] .lb-rank { font-size: 16px !important; }
+.dash [data-bento="lb"] .sec-title { font-size: 14px !important; }
+
+/* sec-title 通用稍大 */
+.dash .sec .sec-title { font-size: 13px !important; }
+
+/* 时间轴/热力图标题更小（极薄区） */
+.dash [data-bento="tl"] .sec-title,
+.dash [data-bento="hm"] .sec-title { font-size: 11px !important; }
+
+/* ============================================================
+   v3.9: winLog 字号 +50% + 时间轴条减半 + 摄像头自愈
+   ============================================================ */
+
+/* winLog Top5 字号 ×1.5 */
+.dash [data-bento="winlog"] .sec-title { font-size: 18px !important; }
+.dash [data-bento="winlog"] .wa-top-head { font-size: 18px !important; }
+.dash [data-bento="winlog"] .wa-top-list { font-size: 16px !important; line-height: 1.5; }
+.dash [data-bento="winlog"] .wa-top-list > * { padding: 3px 0 !important; font-size: 15px !important; }
+
+/* 时间轴 tl-bars 单条减半（高度 50%） */
+.dash [data-bento="tl"] .tl-bars {
+  height: 50% !important;
+  margin: auto 0 !important;
+}
+.dash [data-bento="tl"] .tl-bars > * {
+  max-height: 100% !important;
+}
+
+/* ============================================================
+   v3.10: 排行榜两侧去框 + 中间领奖台拉高
+   ============================================================ */
+
+/* 左右两侧：去边框/背景 */
+.dash [data-bento="lb"] .lb-side {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 4px !important;
+}
+
+/* 中间领奖台容器拉高 + 撑满 */
+.dash [data-bento="lb"] .podium-wrap {
+  align-items: stretch !important;
+  height: 100% !important;
+}
+.dash [data-bento="lb"] .podium-center {
+  height: 100% !important;
+  display: flex !important;
+  align-items: flex-end !important;
+  justify-content: center !important;
+  gap: 6px !important;
+}
+.dash [data-bento="lb"] .podium-col {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  height: 100% !important;
+  flex: 1 1 0 !important;
+  min-width: 0;
+}
+
+/* podium-bar 用 flex:1 撑高 */
+.dash [data-bento="lb"] .podium-bar {
+  width: 80% !important;
+  flex: 1 1 auto !important;
+  min-height: 30px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 8px 8px 0 0 !important;
+}
+.dash [data-bento="lb"] .podium-col.p1 .podium-bar { background: linear-gradient(180deg, #ffd700, #f4b400); }
+.dash [data-bento="lb"] .podium-col.p2 .podium-bar { background: linear-gradient(180deg, #c0c0c0, #9aa0a6); }
+.dash [data-bento="lb"] .podium-col.p3 .podium-bar { background: linear-gradient(180deg, #cd7f32, #b06b1f); }
+
+/* 高度差：1 名最高，2 次，3 最矮 */
+.dash [data-bento="lb"] .podium-col.p1 .podium-bar { min-height: 80% !important; }
+.dash [data-bento="lb"] .podium-col.p2 .podium-bar { min-height: 60% !important; }
+.dash [data-bento="lb"] .podium-col.p3 .podium-bar { min-height: 45% !important; }
+
+.dash [data-bento="lb"] .podium-val { font-size: 14px !important; font-weight: 800 !important; color: #fff !important; text-shadow: 0 1px 2px rgba(0,0,0,0.4); }
+
+/* ============================================================
+   v3.11: lb / tl / hm 内容垂直居中
+   ============================================================ */
+
+/* sec 整体 flex column，让内容默认居中（之前 flex:1 没指定 justify） */
+.dash [data-bento="lb"],
+.dash [data-bento="tl"],
+.dash [data-bento="hm"] {
+  display: flex !important;
+  flex-direction: column !important;
+}
+.dash [data-bento="lb"] > *:not(.sec-title),
+.dash [data-bento="tl"] > *:not(.sec-title),
+.dash [data-bento="hm"] > *:not(.sec-title) {
+  flex: 1 1 auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  align-items: stretch !important;
+  margin: auto 0 !important;
+}
+
+/* tl-bars / heatmap 居中（取消 v3.9 的 margin:auto 变 stretch） */
+.dash [data-bento="tl"] .tl-bars {
+  margin: 0 !important;
+  align-self: center !important;
+  width: 100% !important;
+}
+.dash [data-bento="hm"] .heatmap-wrap {
+  margin: 0 !important;
+  align-self: center !important;
+  width: 100% !important;
+}
+
+/* ============================================================
+   v3.12: 修复 lb 内部 grid 被 v3.11 改成 column 的回归
+   ============================================================ */
+
+/* 排行榜内部容器还原 grid 横向布局 */
+.dash [data-bento="lb"] .podium-wrap {
+  display: grid !important;
+  grid-template-columns: 1fr 2fr 1fr !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: stretch !important;
+  margin: 0 !important;
+  height: 100% !important;
+  gap: 10px !important;
+}
+.dash [data-bento="lb"] .lb-side {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  height: 100% !important;
+  margin: 0 !important;
+}
+
+/* ============================================================
+   v3.13: winlog 内容上对齐
+   ============================================================ */
+.dash [data-bento="winlog"] {
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: flex-start !important;
+  align-items: stretch !important;
+  padding-top: 4px !important;
+}
+.dash [data-bento="winlog"] > *:not(.sec-title) {
+  margin: 0 !important;
+  flex: 0 0 auto !important;
+}
+
+/* ============================================================
+   v3.14: winlog 给更多高度（20vh），让 Top5 完整显示
+   - hero 16, win/goal 22, winlog 20, lb 16, tl/hm 7/7 (= 95vh)
+   - winlog 内容上下贴齐，不再 padding-top 偏移
+   ============================================================ */
+.dash [data-bento="winlog"] {
+  padding: 4px 6px !important;
+  overflow: hidden !important;
+}
+.dash [data-bento="winlog"] .wa-top-cols {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 8px !important;
+}
+.dash [data-bento="winlog"] .wa-top-col {
+  display: flex !important;
+  flex-direction: column !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+.dash [data-bento="winlog"] .wa-top-list {
+  flex: 1 1 auto !important;
+  overflow-y: auto !important;
+  min-height: 0 !important;
+}
+
+/* ============================================================
+   v3.15: winlog 字号再放大占满
+   ============================================================ */
+.dash [data-bento="winlog"] .sec-title { font-size: 20px !important; margin-bottom: 4px !important; }
+.dash [data-bento="winlog"] .wa-top-head { font-size: 20px !important; margin-bottom: 6px !important; }
+.dash [data-bento="winlog"] .wa-top-list { font-size: 18px !important; line-height: 1.7 !important; }
+.dash [data-bento="winlog"] .wa-top-list > * { padding: 4px 0 !important; font-size: 17px !important; }
+
+/* ============================================================
+   v3.16: 全局字号统一（基准约 17-18px）
+   - 标题/数值: 20-22, 正文: 17-18, 副标签: 14-15
+   ============================================================ */
+
+/* 通用 sec-title */
+.dash .sec-title, .dash .sec > .sec-title { font-size: 20px !important; }
+
+/* health chip */
+.dash [data-bento="health"] .md3-chip-icon { font-size: 32px !important; }
+.dash [data-bento="health"] .md3-chip-lbl  { font-size: 15px !important; }
+.dash [data-bento="health"] .md3-chip-val  { font-size: 22px !important; }
+
+/* hero 6 卡 */
+.dash [data-bento="hero"] .md-card-hero .icon { font-size: 36px !important; }
+.dash [data-bento="hero"] .md-card-hero .lbl  { font-size: 16px !important; }
+.dash [data-bento="hero"] .md-card-hero .val  { font-size: 24px !important; }
+
+/* win sec */
+.dash [data-bento="win"] .proc-name      { font-size: 20px !important; }
+.dash [data-bento="win"] .stay-time      { font-size: 17px !important; }
+.dash [data-bento="win"] .win-title-line { font-size: 17px !important; }
+.dash [data-bento="win"] .recent-row     { font-size: 16px !important; }
+.dash [data-bento="win"] .today-stats    { font-size: 17px !important; }
+
+/* goal panes */
+.dash [data-bento="goal"] .ring-pct      { font-size: 17px !important; }
+.dash [data-bento="goal"] .goal-info, 
+.dash [data-bento="goal"] .goal-info span,
+.dash [data-bento="goal"] .session-info,
+.dash [data-bento="goal"] .break-info    { font-size: 16px !important; }
+.dash [data-bento="goal"] #breakTimer    { font-size: 20px !important; }
+.dash [data-bento="goal"] .md3-btn-large { font-size: 14px !important; }
+
+/* lb 两侧 */
+.dash [data-bento="lb"] .medal-icon,
+.dash [data-bento="lb"] .streak-num      { font-size: 32px !important; font-weight: 800; }
+.dash [data-bento="lb"] .streak-label,
+.dash [data-bento="lb"] .lb-side-label   { font-size: 16px !important; }
+.dash [data-bento="lb"] .gap-note        { font-size: 14px !important; }
+.dash [data-bento="lb"] .lb-row          { font-size: 16px !important; }
+.dash [data-bento="lb"] .podium-val      { font-size: 17px !important; }
+
+/* tl / hm */
+.dash [data-bento="tl"] *,
+.dash [data-bento="hm"] * { font-size: 14px !important; }
+.dash [data-bento="tl"] .sec-title,
+.dash [data-bento="hm"] .sec-title { font-size: 18px !important; }
+
+/* drawer 内的字体 */
+.drawer-body { font-size: 16px !important; }
+.drawer-body .sec-title, .drawer-body .wa-top-head { font-size: 20px !important; }
+
+/* ============================================================
+   v3.17: 时间轴 bar 自适应铺满容器（不滚动）
+   ============================================================ */
+.dash [data-bento="tl"] .tl-bars {
+  overflow-x: hidden !important;
+  gap: 1px !important;
+  padding: 4px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+.dash [data-bento="tl"] .tl-bar {
+  flex: 1 1 0 !important;
+  min-width: 0 !important;
+  max-width: none !important;
+}
+.dash [data-bento="tl"] .tl-bar:hover {
+  flex: 2 1 0 !important;
+}
+
+/* ============================================================
+   v3.18: tl/hm 标题统一 20px
+   ============================================================ */
+.dash [data-bento="tl"] .sec-title,
+.dash [data-bento="hm"] .sec-title { font-size: 20px !important; }
+
+/* ============================================================
+   v3.19: 开始休息按钮强制主题色
+   ============================================================ */
+.dash [data-bento="goal"] .md3-btn-large {
+  background-color: var(--primary) !important;
+  color: #fff !important;
+  border: none !important;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15) !important;
+  border-radius: 12px !important;
+}
+.dash [data-bento="goal"] .md3-btn-large.danger {
+  background-color: var(--red) !important;
+  color: #fff !important;
+}
+.dash [data-bento="goal"] .md3-btn-large:hover {
+  filter: brightness(1.1);
+}
+
+/* ============================================================
+   v3.21: 全局最小字号 17px（与 winlog 最小齐平）
+   ============================================================ */
+.dash, .dash *, .drawer-body, .drawer-body * {
+  font-size: 17px;
+}
+
+/* 覆写之前所有 < 17 的具体值 */
+.dash .sec-title, .dash .sec > .sec-title { font-size: 22px !important; }
+.dash [data-bento="health"] .md3-chip-icon { font-size: 32px !important; }
+.dash [data-bento="health"] .md3-chip-lbl  { font-size: 17px !important; }
+.dash [data-bento="health"] .md3-chip-val  { font-size: 22px !important; }
+.dash [data-bento="hero"] .md-card-hero .icon { font-size: 36px !important; }
+.dash [data-bento="hero"] .md-card-hero .lbl  { font-size: 17px !important; }
+.dash [data-bento="hero"] .md-card-hero .val  { font-size: 24px !important; }
+.dash [data-bento="win"] .proc-name      { font-size: 20px !important; }
+.dash [data-bento="win"] .stay-time      { font-size: 17px !important; }
+.dash [data-bento="win"] .win-title-line { font-size: 17px !important; }
+.dash [data-bento="win"] .recent-row     { font-size: 17px !important; }
+.dash [data-bento="win"] .today-stats    { font-size: 17px !important; }
+.dash [data-bento="goal"] .ring-pct      { font-size: 17px !important; }
+.dash [data-bento="goal"] .goal-info,
+.dash [data-bento="goal"] .goal-info span,
+.dash [data-bento="goal"] .session-info,
+.dash [data-bento="goal"] .break-info    { font-size: 17px !important; }
+.dash [data-bento="goal"] #breakTimer    { font-size: 22px !important; }
+.dash [data-bento="goal"] .md3-btn-large { font-size: 17px !important; }
+.dash [data-bento="goal"] .md3-btn-large .md3-btn-text { font-size: 17px !important; }
+.dash [data-bento="goal"] .md3-btn-large .md3-btn-icon { font-size: 22px !important; }
+.dash [data-bento="goal"] .goal-set label { font-size: 17px !important; }
+.dash [data-bento="lb"] .medal-icon,
+.dash [data-bento="lb"] .streak-num      { font-size: 32px !important; }
+.dash [data-bento="lb"] .streak-label,
+.dash [data-bento="lb"] .lb-side-label   { font-size: 17px !important; }
+.dash [data-bento="lb"] .gap-note        { font-size: 17px !important; }
+.dash [data-bento="lb"] .lb-row          { font-size: 17px !important; }
+.dash [data-bento="lb"] .podium-val      { font-size: 18px !important; }
+.dash [data-bento="tl"] *,
+.dash [data-bento="hm"] * { font-size: 17px !important; }
+.dash [data-bento="tl"] .sec-title,
+.dash [data-bento="hm"] .sec-title { font-size: 22px !important; }
+.dash [data-bento="winlog"] .wa-top-list > * { font-size: 17px !important; }
+
+.drawer-body { font-size: 17px !important; }
+.drawer-body * { font-size: 17px; }
+.drawer-body .sec-title, .drawer-body .wa-top-head { font-size: 22px !important; }
+
+/* ============================================================
+   v3.35: 合并侧边栏 + 汉堡按钮 + 时间轴竖线 + 加大侧边栏字号
+   ============================================================ */
+
+/* —— 汉堡菜单按钮（三横线） —— */
+.hdr-btn-menu {
+  display: inline-flex !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
+  align-items: stretch !important;
+  width: 32px !important;
+  height: 22px !important;
+  padding: 5px 6px !important;
+  gap: 0 !important;
+}
+.hdr-btn-menu .hb-line {
+  display: block;
+  height: 2px;
+  width: 100%;
+  background: currentColor;
+  border-radius: 2px;
+}
+.hdr-btn-menu:hover .hb-line { background: var(--primary); }
+
+/* —— 时间轴：每分钟竖向细线 —— */
+.dash [data-bento="tl"] .tl-bars {
+  align-items: stretch !important;
+  padding: 6px 4px !important;
+  gap: 2px !important;
+}
+.dash [data-bento="tl"] .tl-bar {
+  flex: 1 1 0 !important;
+  min-width: 2px !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  border-radius: 2px !important;
+  align-self: stretch !important;
+}
+.dash [data-bento="tl"] .tl-bar:hover {
+  flex: 1 1 0 !important;
+  filter: brightness(1.25);
+}
+
+/* —— 侧边栏字号增大 —— */
+.drawer-body { font-size: 20px !important; }
+.drawer-body * { font-size: 20px !important; }
+.drawer-body .sec-title,
+.drawer-body .wa-top-head { font-size: 26px !important; font-weight: 800 !important; }
+.drawer-body .ev-t { font-size: 16px !important; opacity: 0.7; }
+.drawer-body .wa-top-list,
+.drawer-body .wa-top-list * { font-size: 19px !important; }
+.drawer-title { font-size: 22px !important; font-weight: 800 !important; }
+.drawer-close { font-size: 26px !important; }
+
+/* ============================================================
+   v3.36: 4 \u4e2a\u4fee\u590d
+   1. \u65f6\u95f4\u8f74 flex-direction \u5f3a\u5236\u6a2a\u5411 + \u7ad6\u7ebf\u663e\u793a
+   2. \u4fa7\u8fb9\u680f\u6444\u50cf\u5934\u5b8c\u5168\u663e\u793a
+   3. \u4f11\u606f\u6309\u94ae\u5361\u7247\u4e0e\u76ee\u6807\u5361\u7edf\u4e00
+   4. \u4fa7\u8fb9\u680f\u89c4\u5219\u6309\u94ae\u4e0d\u53d7 font-size \u5f3a\u5236\u6ce8\u5165
+   ============================================================ */
+
+/* \u4fee 1: \u65f6\u95f4\u8f74\u6062\u590d row flex\u3001\u7ad6\u7ebf bar */
+.dash [data-bento="tl"] > *:not(.sec-title) {
+  flex-direction: row !important;
+  align-items: stretch !important;
+  justify-content: flex-start !important;
+}
+.dash [data-bento="tl"] .tl-bars {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: stretch !important;
+  height: 100% !important;
+  width: 100% !important;
+  padding: 6px 4px !important;
+  gap: 2px !important;
+  overflow: hidden !important;
+}
+.dash [data-bento="tl"] .tl-bar {
+  flex: 1 1 0 !important;
+  min-width: 3px !important;
+  max-width: none !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: 100% !important;
+  align-self: stretch !important;
+  border-radius: 2px !important;
+  opacity: 1 !important;
+}
+.dash [data-bento="tl"] .tl-bar.tl-bar-placeholder {
+  background: var(--bg3) !important;
+  opacity: 0.4 !important;
+}
+
+/* \u4fee 2: \u4fa7\u8fb9\u680f\u6444\u50cf\u5934\u9762\u677f\u5b8c\u5168\u663e\u793a */
+.drawer-body .cam-panel {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 0 16px 0 !important;
+  box-sizing: border-box !important;
+}
+.drawer-body .cam-panel img,
+.drawer-body #vid_stream {
+  width: 100% !important;
+  max-width: 100% !important;
+  height: auto !important;
+  max-height: 60vh !important;
+  display: block !important;
+  object-fit: contain !important;
+  background: #000 !important;
+}
+
+/* \u4fee 3: \u4f11\u606f\u5f00\u59cb\u6309\u94ae\u6837\u5f0f (goal-start-btn) \u4e0e\u76ee\u6807\u5361\u4e00\u81f4 */
+.goal-start-btn {
+  padding: 4px 12px;
+  border: none;
+  border-radius: 6px;
+  background: var(--primary);
+  color: #fff;
+  font-weight: 700;
+  font-size: 12px;
+  cursor: pointer;
+  transition: filter .15s;
+}
+.goal-start-btn:hover { filter: brightness(1.1); }
+.goal-start-btn.danger { background: var(--red); }
+.dash [data-bento="goal"].goal-split .goal-pane#goalPane_break .goal-ring-wrap {
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 10px !important;
+}
+
+/* \u4fee 4: \u4fa7\u8fb9\u680f\u6309\u94ae/\u56fe\u6807\u4e0d\u88ab\u5b57\u53f7\u5f3a\u5236\u6240\u51fb\u8d25 */
+.drawer-body button,
+.drawer-body button * {
+  font-size: inherit !important;
+}
+.drawer-body .rule-btn,
+.drawer-body .wa-rule-btn,
+.drawer-body [class*="rule"] button,
+.drawer-body .wa-app-btn {
+  font-size: 14px !important;
+  line-height: 1.3 !important;
+  padding: 4px 10px !important;
+  min-width: 0 !important;
+  height: auto !important;
+  box-sizing: border-box !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  vertical-align: middle !important;
+}
+.drawer-body .wa-rule-tag,
+.drawer-body .wa-cat-badge {
+  font-size: 13px !important;
+  padding: 2px 8px !important;
+  line-height: 1.3 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+}
+
+/* v3.37: \u4fa7\u8fb9\u680f\u6444\u50cf\u5934\u5f3a\u5236\u7ad6\u5411 */
+.drawer-body .cam-panel {
+  height: auto !important;
+  max-height: none !important;
+  min-height: 0 !important;
+  flex-direction: column !important;
+  width: 100% !important;
+  padding: 6px !important;
+  gap: 8px !important;
+}
+.drawer-body .cam-panel .cam-view {
+  width: 100% !important;
+  max-width: 100% !important;
+  height: auto !important;
+  aspect-ratio: 3 / 4 !important;
+  min-height: 280px !important;
+  flex: 0 0 auto !important;
+}
+.drawer-body .cam-panel .cam-view video,
+.drawer-body .cam-panel .cam-view img,
+.drawer-body #vid_stream {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important;
+  background: #000 !important;
+}
+.drawer-body .cam-panel .md3-stats {
+  border-left: none !important;
+  border-top: 1px solid var(--border) !important;
+  padding-top: 6px !important;
+  width: 100% !important;
+  flex: 0 0 auto !important;
+}
+
+/* v3.38: break timer \u5b57\u4f53\u7edf\u4e00 + \u4fa7\u8fb9\u680f\u89c4\u5219\u9ed8\u8ba4\u5c55\u5f00 */
+#breakSec .goal-ring-pct,
+.dash [data-bento="goal"] #breakTimer {
+  font-family: inherit !important;
+  font-variant-numeric: tabular-nums !important;
+}
+/* wlRules \u9ed8\u8ba4\u5c55\u5f00\uff08\u7528\u6237\u672a\u624b\u52a8\u6298\u53e0\u65f6\uff09 */
+#wlRules:not([data-user-collapsed]) { display: block !important; }
